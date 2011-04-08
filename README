@@ -1,0 +1,4 @@
+0mqproxy is a proxy server written using zeromq and Tornado.
+
+Tornado answers https connections, then zeromq is used to proxy
+to other zeromq clients using a fair queue method.

@@ -1,0 +1,8 @@
+nbproject
+*.pyc
+*.swp
+# I generally keep tornado installed with my projects so I can
+# switch versions for my projects. Ignore to keep out of the repo
+# for this project
+tornado/
+
