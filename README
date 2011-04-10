@@ -1,4 +1,41 @@
-0mqproxy is a proxy server written using zeromq and Tornado.
+Note: This README will change to a better project description once
+there is actual code to support it.
 
-Tornado answers https connections, then zeromq is used to proxy
-to other zeromq clients using a fair queue method.
+Scale0 is a project to create a protocol and language agnostic
+infrastructure framework for scaling, using zeromq. Right now the
+plan is to implement a broker based system similar to the first
+large example found in the zeromq guide at http://zguide.zeromq.org/page:all
+
+Front ends and back ends will be required to act as zeromq REQ connectors
+using documented apis for working with the brokers. The expectation is
+that front ends will accept connections using standard protocols and pass
+data back to back end pools. Minimal parsing should be done by the front
+ends.
+
+To assist with this an internal protocol used primarily for task routing
+will be included, using the multipart message features provided by zeromq.
+
+The over all system will be written initially in Python, specifically because
+of the authors familiarity with the language. Once everything is in place
+this language choice me be re-examined in order to provide better performance
+if necessary.
+
+Key requirements are:
+ - Brokers, front ends and back ends can be added without requiring a restart of any
+ Scale0 broker.
+
+- Active monitoring of all back ends and brokers will be built into the environment
+ in order to avoid task loss.
+
+- Task processing requests can be routed to multiple back ends with the first response
+ being authoritative when required. This will provide maximium durability for tasks that
+ take advantage of this feature, limiting the chance of a stalled task processing job on
+ one back end causing an issue with the response generation.
+
+ The first purpose of this system will be to provide an https caching reverse proxy
+ server with the option to use the file system or MongoDB for the cache storage.
+ However, Scale0 will not have any http or other protocol requirements, allowing
+ it to be used to scale other similar processing tasks. Some examples could include
+ smtp, syslog or even routing database requests to multiple database instances.
+
+ This project is still in the infancy of the research and design phase.
