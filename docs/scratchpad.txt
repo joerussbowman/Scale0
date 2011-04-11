@@ -1,0 +1,24 @@
+While writing documentation to build against I'll have ideas for things that
+should be documented better later. That's what this file is for.
+
+Protocol:
+CHECKCONFIG - Requests a config update. Used by new clients/brokers initiating 
+a connection. Option information could include configtype, so that ZFL, JSON
+or XML can be used. The stack should not force a specific config parsing
+requirement applications, instead should be able to provide it in common
+formats to ease development against it. Scale0 provided libraries should
+choose the parser that is the fastest, and not enforce a standard. Default will
+be JSON if the type option is not set.
+
+If the application already has a config, it will also pass a configversion
+option.
+
+CONFIGACK - Broker reply when CHECKCONFIG version request matches the version
+on the broker.
+
+CONFIG - Broker reply with configuration. Type will be specified as part of
+the request.
+
+READY - This is the client telling the broker it's ready for a request. The
+request should include options for the services provided by the client and 
+the current configversion.

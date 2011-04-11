@@ -1,0 +1,28 @@
+Clients are applications that interact with Scale0. There are requirements
+and protocols that a client must meet and have support for in order to
+interact with a broker.
+
+The first requirement is that the application must support zeromq. All 
+communication to and from the brokers happen via zeromq sockets.
+
+Full support for zeromq sockets is include, so tcp, ipc and inproc are all
+acceptable. 
+
+[ note this next section is based off my understanding of zeromq after reading
+the guide. Parts of this may just be plain wrong or even dumb. That's what the
+next phase of actual code development will help prove or disprove. ]
+
+Connection Process:
+Clients on start will need to make a REQ connection to a broker
+with a CHECKCONFIG request. CHECKCONFIG requests can include optional
+information such as configtype and configversion.
+
+
+If the configversion option passed by the client matches the current
+configversion on the broker the broker will respond with a CONFIGACK. Otherwise
+the broker will reply with a CONFIG response, which will include the config
+[ come back here and add example config ].
+
+The client will then make REQ or XREQ to the brokers specificed by the
+config with a READY.
+
