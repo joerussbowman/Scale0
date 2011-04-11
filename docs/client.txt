@@ -8,9 +8,9 @@ communication to and from the brokers happen via zeromq sockets.
 Full support for zeromq sockets is include, so tcp, ipc and inproc are all
 acceptable. 
 
-[ note the rest is based off my understanding of zeromq after reading
+*** note the rest is based off my understanding of zeromq after reading
 the guide. Parts of this may just be plain wrong or even dumb. That's what the
-next phase of actual code development will help prove or disprove. ]
+next phase of actual code development will help prove or disprove. ***
 
 There are three types of clients that can connect to a broker, they are
 defined below with their connection process.
@@ -29,8 +29,8 @@ file. When additional brokers are introduced to a running environment they
 must be started with an argument detailing which broker(s) they should connect
 to in order to receive their config. 
 
-[ That connection can include stating which services the broker will provide 
-for if it's intended for specific use. Will detail this below in a bit. ]
+*** That connection can include stating which services the broker will provide 
+for if it's intended for specific use. Will detail this below in a bit. ***
 
 FRONTEND
 
@@ -44,7 +44,8 @@ information such as configtype and configversion.
 If the configversion option passed by the client matches the current
 configversion on the broker the broker will respond with a CONFIGACK. Otherwise
 the broker will reply with a CONFIG response, which will include the config
-[ come back here and add example config ].
+
+*** come back here and add example config ***
 
 The client will then make REQ or XREQ to the brokers specificed by the
 config with a READY.

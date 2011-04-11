@@ -1,7 +1,7 @@
 While writing documentation to build against I'll have ideas for things that
 should be documented better later. That's what this file is for.
 
-Protocol:
+[ PROTOCOL ]
 CHECKCONFIG: When intiating a new connection the client must validate it's
              config.
     Options:
@@ -44,3 +44,24 @@ HEARTBEAT: This is the standard heartbeat request.
         config_version: 
             Configuration version. Heavy to include, but will help ensure
             clients are running against the current configuration.
+
+[ BROKER CONFIG ]
+This details all the information a brokers require for operation. Not all
+options need to be pushed to clients. What options are required for clients
+will be detailed later.
+
+frontend_port: 
+    The port on which frontends connect.
+
+backend_port: 
+    The port on which backends connect.
+
+config_pub_port:
+    The port on which this broker publishes new configurations.
+
+config_sub_ports:
+    The port(s) on which the broker listens for new configurations.
+
+    *** The idea here is that everything, when possible, should listen for
+    configuration changes from more than one source in order to provide
+    reliability and redundancy. ****

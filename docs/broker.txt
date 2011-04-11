@@ -43,3 +43,6 @@ with an availble http based management front end, which should be disabled
 by default. Security vs ease of administration should be an exercise left
 for the maintainers of the network. [ this will need to be defined better
 later ].
+
+Brokers can define which services they provide services for, including
+builtins or backend specified services.
