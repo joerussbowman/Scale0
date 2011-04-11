@@ -2,13 +2,15 @@ While writing documentation to build against I'll have ideas for things that
 should be documented better later. That's what this file is for.
 
 Protocol:
-CHECKCONFIG - Requests a config update. Used by new clients/brokers initiating 
-a connection. Option information could include configtype, so that ZFL, JSON
-or XML can be used. The stack should not force a specific config parsing
-requirement applications, instead should be able to provide it in common
-formats to ease development against it. Scale0 provided libraries should
-choose the parser that is the fastest, and not enforce a standard. Default will
-be JSON if the type option is not set.
+CHECKCONFIG: When intiating a new connection the client must validate it's
+             config.
+    Options:
+        config_type:     
+            The format the client accepts the config in. Can be JSON, XML
+            or ZFL.
+
+        config_version:
+            The version of config the client has on record.
 
 If the application already has a config, it will also pass a configversion
 option.
@@ -19,6 +21,26 @@ on the broker.
 CONFIG - Broker reply with configuration. Type will be specified as part of
 the request.
 
-READY - This is the client telling the broker it's ready for a request. The
-request should include options for the services provided by the client and 
-the current configversion.
+READY: This tells the Broker that the worker client is availble for new
+       connections. It's at this point that the client is added to the 
+       LRU queue. 
+    Options:
+        services:
+            Services the client accepts requests for.
+
+        heartbeat:
+            If the client supports heartbeat. Clients that block
+            during processing may not support heartbeat. The
+            recommendation will be to always support heartbeat.
+
+        hbeatinterval:
+            The interval at which the broker can expect heartbeat requests
+            from the client.
+
+HEARTBEAT: This is the standard heartbeat request.
+    Options:
+        time:
+            Time according to client when heartbeat request was sent.
+        config_version: 
+            Configuration version. Heavy to include, but will help ensure
+            clients are running against the current configuration.
