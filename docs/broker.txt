@@ -12,6 +12,8 @@ on the zeromq website, [ url goes here, working offline right now ]. The
 other issues Scale0 offers solutions for are reliability, scalability and
 mangement flexibility.
 
+SERVICES
+
 Scale0 brokers will provide the following services:
 
 Service Discovery: In order to meet the requirements of being service
@@ -46,3 +48,5 @@ later ].
 
 Brokers can define which services they provide services for, including
 builtins or backend specified services.
+
+CONFIGURATION

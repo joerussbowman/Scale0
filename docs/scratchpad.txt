@@ -37,13 +37,44 @@ READY: This tells the Broker that the worker client is availble for new
             The interval at which the broker can expect heartbeat requests
             from the client.
 
+        time: The current client time.
+
+        config_version: The version of config running on the client.
+
 HEARTBEAT: This is the standard heartbeat request.
     Options:
         time:
             Time according to client when heartbeat request was sent.
+            If this is way off from the time on the server, then there
+            is a problem and an error will be returned while the client
+            will be disconnected.
+
         config_version: 
             Configuration version. Heavy to include, but will help ensure
             clients are running against the current configuration.
+
+MANAGEMENTREQ: Management requests are commands. They are bundled under this
+    flag to make auth checks quicker.
+
+    Options:
+        auth_id: id for auth requests
+
+        auth_password: Password for auth request
+
+        command: One of the following. disable, enable, reload_config
+
+DISCONNECTERROR:
+    Returned to clients when they are disconnected for an error. Properties
+    are
+        Error Code: *** thinking I should see if standard http error codes
+                    will be a good fit. ***
+
+        Error Message: Pretty error message to send to client.
+
+FORCENEGOTIATE:
+    Sent by broker to client in the event the broker isn't sure if the client
+    is in an acceptable state. Upon getting this message from a broker a client
+    should initiate CHECKCONFIG.
 
 [ BROKER CONFIG ]
 This details all the information a brokers require for operation. Not all
@@ -65,3 +96,29 @@ config_sub_ports:
     *** The idea here is that everything, when possible, should listen for
     configuration changes from more than one source in order to provide
     reliability and redundancy. ****
+
+state: joining, active, disabled
+    joining is the default state when adding a broker to the network. Once
+    it's received it's config it will go to an active state. Brokers can
+    also be disabled. In a disabled state they will provide no response to
+    requests except for a management request to re-enable.
+
+peers: List of peer sockets to communicate with. This is the port used for
+    heartbeat and work status communication.
+
+default_heartbeat_interval:
+    Clients can negotiate a longer heartbeat interval, but not a shorter one.
+
+services: 
+    list of services managed by the broker, or all
+
+LRU:
+    The least recently used list which will be a list of backends serviced by
+    the broker. Each item on the list will have the following properties
+        services: list of services the backend supports
+        last_heartbeat: used to determine if the backend is alive or not.
+
+error_clients:
+    If due to a configuration issue or some other problem a client is
+    repeatedly not negotiating correctly a client can be ignoredas much
+    as is possible with zeromq. 
