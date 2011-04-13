@@ -1,80 +1,83 @@
-*** TODO: I am being very inconsistent about frontend, backend, client,
+*** TODO: I am being very inconsistent about frontend, backend, worker,
 *** worker... If I am to expect anyone to be able to follow along I'm going
 *** to have to come up with a consistent dictionary. 
-
+***
+*** Dictionary started, will remove this note when I'm done converting
+*** all existing documentation to the terminology.
 
 While writing documentation to build against I'll have ideas for things that
 should be documented better later. That's what this file is for.
 
 [ PROTOCOL ]
-CHECKCONFIG: When intiating a new connection the client must validate it's
-             config.
-    Options:
+CHECKCONFIG: When intiating a new connection to a broker a worker must validate 
+             it's config.
+    Parameters:
         config_type:     
-            The format the client accepts the config in. Can be JSON, XML
+            The format the worker accepts the config in. Can be JSON, XML
             or ZFL.
-
-        config_version:
-            The version of config the client has on record.
 
 If the application already has a config, it will also pass a configversion
 option.
 
-CONFIG - Broker reply with configuration. Type will be specified as part of
-the request.
+CONFIG - Broker reply with configuration.
+    Parameters:
+        config_type:
+            The format the config is in.
+        config:
+            The config.
 
-NEEDBROKER - In the event that a client is unable to connect to it's prefered
+NEEDBROKER - In the event that a worker is unable to connect to it's prefered
 broker, it may try to connect to another one with a NEEDBROKER request. This
-will include the client identity and services offered. 
+will include the worker identity and services offered. 
 
 *** The broker group will then need to determine if thers is a problem, or
-route the client to a new broker, setting it as it's preferred broker. If
+route the worker to a new broker, setting it as it's preferred broker. If
 there is an issue with a broker and it's restarted maybe it should connect
-the client to tell it to switch back? ****
+the worker to tell it to switch back? ****
 
-READY: This tells the Broker that the worker client is availble for new
-       connections. It's at this point that the client is added to the 
+READY: This tells the Broker that the worker is availble for new
+       connections. It's at this point that the worker is added to the 
        LRU queue. 
-    Options:
+    Parameters:
         services:
-            Services the client accepts requests for.
+            Services the worker accepts requests for.
 
         heartbeat_interval:
             The interval at which the broker can expect heartbeat requests
-            from the client. 
+            from the worker. 
 
-        time: The current client time.
+        time: The current worker time.
 
-        config_version: The version of config running on the client.
+        config_version: The version of config running on the worker.
 
 READYOK: This is a reply to a READY request, it is the acknowledgement from
-    broker so that the client knows the broker is working correctly.
+    broker so that the worker knows the broker is working correctly.
 
 PING: This is the standard heartbeat request.
-    Options:
+    Parameters:
         time:
-            Time according to client when heartbeat request was sent.
+            Time according to worker when heartbeat request was sent.
             If this is way off from the time on the server, then there
-            is a problem and an error will be returned while the client
+            is a problem and an error will be returned while the worker
             will be disconnected.
 
         config_version: 
             Configuration version. Heavy to include, but will help ensure
-            clients are running against the current configuration.
+            workers are running against the current configuration.
 
 PONG: This is the response to PING
-    Options:
+    Parameters:
         time:
-            Time according to client when heartbeat request was sent.
+            Time according to worker when heartbeat request was sent.
             If this is way off from the time on the server, then there
-            is a problem and an error will be returned while the client
+            is a problem and an error will be returned while the worker
             will be disconnected.
 
         config_version: 
             Configuration version. Heavy to include, but will help ensure
-            clients are running against the current configuration.
+            workers are running against the current configuration.
 
-WORKREQUEST: This is the request asking a client to do some work. This
+WORKREQUEST: This is the request asking a worker to do some work. This
     will remove the worker from the LRU queue and add it to the wait queue.
 
     *** Need to plug in how wait queue will work. Maybe this is a good time
@@ -85,16 +88,17 @@ WORKREQUEST: This is the request asking a client to do some work. This
     *** subscribe to group ports unless it's activated.
 
 
-    Options:
+    Parameters:
+
         time:
-            Time according to client when heartbeat request was sent.
+            Time according to worker when heartbeat request was sent.
             If this is way off from the time on the server, then there
-            is a problem and an error will be returned while the client
+            is a problem and an error will be returned while the worker
             will be disconnected.
 
         config_version: 
             Configuration version. Heavy to include, but will help ensure
-            clients are running against the current configuration.
+            workers are running against the current configuration.
 
         work_request_indentifier: This will be the identity of the frontend
             that made the request and the message id, used for routing.
@@ -106,40 +110,40 @@ WORKREPLY: This is the reply to a work request. The broker won't care about any
     errors about the work request, it will be up to the frontend to manage that.
 
 DISCONNECTERROR:
-    Returned to clients when they are disconnected for an error. Properties
+    Returned to workers when they are disconnected for an error. Properties
     are
         Error Code: *** thinking I should see if standard http error codes
                     will be a good fit. ***
 
-        Error Message: Pretty error message to send to client.
+        Error Message: Pretty error message to send to worker.
 
 FORCENEGOTIATE:
-    Sent by broker to client in the event the broker isn't sure if the client
-    is in an acceptable state. Upon getting this message from a broker a client
+    Sent by broker to worker in the event the broker isn't sure if the worker
+    is in an acceptable state. Upon getting this message from a broker a worker
     should initiate CHECKCONFIG.
 
 [ CONNECTIONS ]
 
 Examples of connections to wrap my head around how they work.
-C = client
+C = worker
 B = broker
 
- - Client startup, broker down:
-* client must be informed of a broker to connect to. If it's saving it's config
+ - worker startup, broker down:
+* worker must be informed of a broker to connect to. If it's saving it's config
 * locally it may remember, and also have the group information to fallback on
-* to find a new broker. This will be encouraged for clients, but not required.
+* to find a new broker. This will be encouraged for workers, but not required.
 
 C --- CHECKCONFIG ---> B
-No response from B, client fails to start with error.
+No response from B, worker fails to start with error.
 
- - Client startup, broker up
-* client must be informed of a broker to connect to. If it's saving it's config
+ - worker startup, broker up
+* worker must be informed of a broker to connect to. If it's saving it's config
 * locally it may remember, and also have the group information to fallback on
-* to find a new broker. This will be encouraged for clients, but not required.
+* to find a new broker. This will be encouraged for workers, but not required.
 
 C --- CHECKCONFIG ---> B
 B --- CONFIG ---> C
 C --- READY ---> B
 B --- READYOK ---> C
-* It's at this point that the broker registers the client in the LRU queue.
+* It's at this point that the broker registers the worker in the LRU queue.
 
