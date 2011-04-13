@@ -15,9 +15,6 @@ CHECKCONFIG: When intiating a new connection the client must validate it's
 If the application already has a config, it will also pass a configversion
 option.
 
-CONFIGACK - Broker reply when CHECKCONFIG version request matches the version
-on the broker.
-
 CONFIG - Broker reply with configuration. Type will be specified as part of
 the request.
 
@@ -83,4 +80,27 @@ FORCENEGOTIATE:
     is in an acceptable state. Upon getting this message from a broker a client
     should initiate CHECKCONFIG.
 
+[ CONNECTIONS ]
+
+Examples of connections to wrap my head around how they work.
+C = client
+B = broker
+
+ - Client startup, broker down:
+* client must be informed of a broker to connect to.
+
+C --- CHECKCONFIG ---> B
+No response from B, client fails to start with error.
+
+ - Client startup, broker up
+* client must be informed of a broker to connect to.
+
+C --- CHECKCONFIG ---> B
+B --- CONFIG ---> C
+C --- READY ---> B
+B --- READYOK ---> C
+C --- HEARTBEAT ---> B
+* It's at this point that the broker registers the client in the LRU queue.
+* The READY and HEARTBEAT establishes that the client and broker have
+* a consistent connection.
 
