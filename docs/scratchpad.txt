@@ -1,3 +1,8 @@
+*** TODO: I am being very inconsistent about frontend, backend, client,
+*** worker... If I am to expect anyone to be able to follow along I'm going
+*** to have to come up with a consistent dictionary. 
+
+
 While writing documentation to build against I'll have ideas for things that
 should be documented better later. That's what this file is for.
 
@@ -97,16 +102,8 @@ WORKREQUEST: This is the request asking a client to do some work. This
         body: The body of the request. This is service dependent, Scale0 does
             not have interest in the data herein.
 
-
-MANAGEMENTREQ: Management requests are commands. They are bundled under this
-    flag to make auth checks quicker.
-
-    Options:
-        auth_id: id for auth requests
-
-        auth_password: Password for auth request
-
-        command: One of the following. disable, enable, reload_config
+WORKREPLY: This is the reply to a work request. The broker won't care about any
+    errors about the work request, it will be up to the frontend to manage that.
 
 DISCONNECTERROR:
     Returned to clients when they are disconnected for an error. Properties

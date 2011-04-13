@@ -1,0 +1,35 @@
+This is a list of terms used and their meanings.
+
+Broker: The primary middleware for the network. This term is used
+    when referring to the middleware itself and client communications.
+
+Fallback Broker: Fallback Brokers are an optional class of brokers. They can
+    step in for a Broker when it goes down. These are generally hard wired
+    together, preferably with a cross over cable. See the binary star pattern
+    discussed in the ZeroMQ guide for more information.
+
+Peer: Special term for referring to Brokers when there is Broker to Broker
+    communication.
+
+Family: This refers to a cluster of Brokers within a single location. This can
+    mean Brokers running on the same server, or servers within the same LAN.
+
+Community: This refers to a group of Families. When it becomes necessary to
+    route outside of a Family this is when Community comes in. This isn't
+    well thought out yet, I'll come back to it when I get to this layer.
+
+Worker: This is a backend server, used for data processing. It maintains a 
+    connection with a Broker and handles work requests that are passed to it.
+
+Client: This is a frontend server. This passes work requests to a Broker and
+    waits for a reply. The only time a Broker needs to be aware of a client is
+    when it is accepting a request from one.
+
+LRU Queue: This is the queue a Broker keeps of Workers ready to accept a
+    request. If a Fallback Broker is configured this queue must be kept in
+    sync on both the Broker and the Fallback Broker.
+
+Wait Queue: This is the list of Task Id's and what Worker they've been
+    assigned to. It's expected that all Workers can accept multiple requests
+    at a time, this is primarily used to validate work replies. If a work
+    reply is sent and it doesn't exist in this queue, it's dropped quietly.
