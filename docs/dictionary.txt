@@ -1,4 +1,5 @@
-This is a list of terms used and their meanings.
+This is a list of terms used and their meanings. A consistent dictionary will
+make it a lot easier for people reading the documentation to understand it.
 
 Broker: The primary middleware for the network. This term is used
     when referring to the middleware itself and client communications.
@@ -12,11 +13,14 @@ Peer: Special term for referring to Brokers when there is Broker to Broker
     communication.
 
 Family: This refers to a cluster of Brokers within a single location. This can
-    mean Brokers running on the same server, or servers within the same LAN.
+    mean Brokers running on the same server using ipc://, or servers on a
+    network using tcp://
 
 Community: This refers to a group of Families. When it becomes necessary to
     route outside of a Family this is when Community comes in. This isn't
     well thought out yet, I'll come back to it when I get to this layer.
+    Community may even be better as an added Worker server that can route
+    requests between 2 families?
 
 Worker: This is a backend server, used for data processing. It maintains a 
     connection with a Broker and handles work requests that are passed to it.
