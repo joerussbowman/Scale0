@@ -1,3 +1,25 @@
+Keeping the configuration within the environment up to date. The premise
+that this system is built on is that for the most part the config will be
+stable. That is new brokers and clients will not be added and removed
+a lot, and config changes by admins will be rare.
+
+*** OK, now this has me thinking that consistency of one monolithic
+config is going to be a nightmare. I need to rethink this. I think
+there needs to be a group_config and broker_config fully separate. The
+way it's laid out below it's still possible. ***
+
+When a config change is made, it will be sent on the PUB/SUB config
+network. All brokers with the config service can PUB. All brokers should
+have a SUB port on all brokers with the config service. 
+
+On receipt of a config, it will check the version with it's running version.
+If they are different it will update it's config. If it's the same it will
+check the hash of it's config against the published one. 
+
+*** Not sure what to do if the hashes don't match yet. Conflict resolution
+could happen here and then it could push. Conflict resolution measures could
+be a bit complicated though. Maybe I should rename group to family :) ***
+
 [ CLIENT CONFIG ]
 This is config that each client stores. Both identity and services should
 be sent with a CHECKCONFIG request.
@@ -90,5 +112,8 @@ brokers:
     List of brokers in the group. Includes:
         identity: broker identity
         services: services served by broker
+        config_sub_port: Port to subscribe to for config updates 
 
-
+admins:
+    List of username and 1 way hashed passwords used for administration of the
+    group.

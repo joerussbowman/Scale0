@@ -37,18 +37,16 @@ READY: This tells the Broker that the worker client is availble for new
         services:
             Services the client accepts requests for.
 
-        heartbeat:
-            If the client supports heartbeat. Clients that block
-            during processing may not support heartbeat. The
-            recommendation will be to always support heartbeat.
-
-        hbeatinterval:
+        heartbeat_interval:
             The interval at which the broker can expect heartbeat requests
-            from the client.
+            from the client. 
 
         time: The current client time.
 
         config_version: The version of config running on the client.
+
+READYOK: This is a reply to a READY request, it is the acknowledgement from
+    broker so that the client knows the broker is working correctly.
 
 HEARTBEAT: This is the standard heartbeat request.
     Options:
