@@ -1,0 +1,94 @@
+[ CLIENT CONFIG ]
+This is config that each client stores. Both identity and services should
+be sent with a CHECKCONFIG request.
+
+identity:
+    unique identifier for this client
+
+services:
+    List of services processed by the client.
+
+group_config:
+    config (including fallback group config) for group
+
+prefered_broker: 
+    This is the broker that the client should attempt to connect to.
+    If it is unable to connect to this broker it should send a NEEDBROKER
+    request to another broker in the group_config if any exist.
+
+
+[ BROKER CONFIG ]
+This details all the information a brokers require for operation. Not all
+options need to be pushed to clients. What options are required for clients
+is detailed in the [ CLIENT CONFIG ] section above.
+
+identity:
+    unique identifier for this broker
+
+frontend_port: 
+    The port on which frontends connect.
+
+backend_port: 
+    The port on which backends connect.
+
+config_pub_port:
+    The port on which this broker publishes new configurations.
+
+config_sub_ports:
+    The port(s) on which the broker listens for new configurations.
+
+    *** The idea here is that everything, when possible, should listen for
+    configuration changes from more than one source in order to provide
+    reliability and redundancy. ****
+
+state: joining, active, disabled
+    joining is the default state when adding a broker to the network. Once
+    it's received it's config it will go to an active state. Brokers can
+    also be disabled. In a disabled state they will provide no response to
+    requests except for a management request to re-enable.
+
+peers: List of peer sockets to communicate with. This is the port used for
+    heartbeat and work status communication.
+
+default_heartbeat_interval:
+    Clients can negotiate a longer heartbeat interval, but not a shorter one.
+
+services: 
+    list of services managed by the broker, or all
+
+LRU:
+    The least recently used list which will be a list of backends serviced by
+    the broker. Each item on the list will have the following properties
+        services: list of services the backend supports
+        last_heartbeat: used to determine if the backend is alive or not.
+
+error_clients:
+    If due to a configuration issue or some other problem a client is
+    repeatedly not negotiating correctly a client can be ignored as much
+    as is possible with zeromq. 
+
+group:
+    This option may be blank, if groups aren't used in the network. Otherwise
+    this is a single item for the group a broker is a member of.
+
+fallback_groups:
+    While a broker may be a member of only one group, it can have several
+    fallback groups. Fallback groups are used to route clients to in the event
+    that the primary group is unable to process it's request.
+
+group_config:
+    This is a list of group configs. The Broker should have it's own group
+    config plus any fallback group configs as well. See [ GROUP CONFIG ]
+    below for group config options.
+
+[ GROUP CONFIG ]
+
+name:
+    Unique name for the group.
+
+brokers:
+    List of brokers in the group. Includes:
+        identity: broker identity
+        services: services served by broker
+
+

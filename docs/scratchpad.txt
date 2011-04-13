@@ -21,6 +21,15 @@ on the broker.
 CONFIG - Broker reply with configuration. Type will be specified as part of
 the request.
 
+NEEDBROKER - In the event that a client is unable to connect to it's prefered
+broker, it may try to connect to another one with a NEEDBROKER request. This
+will include the client identity and services offered. 
+
+*** The broker group will then need to determine if thers is a problem, or
+route the client to a new broker, setting it as it's preferred broker. If
+there is an issue with a broker and it's restarted maybe it should connect
+the client to tell it to switch back? ****
+
 READY: This tells the Broker that the worker client is availble for new
        connections. It's at this point that the client is added to the 
        LRU queue. 
@@ -76,49 +85,4 @@ FORCENEGOTIATE:
     is in an acceptable state. Upon getting this message from a broker a client
     should initiate CHECKCONFIG.
 
-[ BROKER CONFIG ]
-This details all the information a brokers require for operation. Not all
-options need to be pushed to clients. What options are required for clients
-will be detailed later.
 
-frontend_port: 
-    The port on which frontends connect.
-
-backend_port: 
-    The port on which backends connect.
-
-config_pub_port:
-    The port on which this broker publishes new configurations.
-
-config_sub_ports:
-    The port(s) on which the broker listens for new configurations.
-
-    *** The idea here is that everything, when possible, should listen for
-    configuration changes from more than one source in order to provide
-    reliability and redundancy. ****
-
-state: joining, active, disabled
-    joining is the default state when adding a broker to the network. Once
-    it's received it's config it will go to an active state. Brokers can
-    also be disabled. In a disabled state they will provide no response to
-    requests except for a management request to re-enable.
-
-peers: List of peer sockets to communicate with. This is the port used for
-    heartbeat and work status communication.
-
-default_heartbeat_interval:
-    Clients can negotiate a longer heartbeat interval, but not a shorter one.
-
-services: 
-    list of services managed by the broker, or all
-
-LRU:
-    The least recently used list which will be a list of backends serviced by
-    the broker. Each item on the list will have the following properties
-        services: list of services the backend supports
-        last_heartbeat: used to determine if the backend is alive or not.
-
-error_clients:
-    If due to a configuration issue or some other problem a client is
-    repeatedly not negotiating correctly a client can be ignoredas much
-    as is possible with zeromq. 
