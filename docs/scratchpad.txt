@@ -45,7 +45,7 @@ READY: This tells the Broker that the worker client is availble for new
 READYOK: This is a reply to a READY request, it is the acknowledgement from
     broker so that the client knows the broker is working correctly.
 
-HEARTBEAT: This is the standard heartbeat request.
+PING: This is the standard heartbeat request.
     Options:
         time:
             Time according to client when heartbeat request was sent.
@@ -56,6 +56,47 @@ HEARTBEAT: This is the standard heartbeat request.
         config_version: 
             Configuration version. Heavy to include, but will help ensure
             clients are running against the current configuration.
+
+PONG: This is the response to PING
+    Options:
+        time:
+            Time according to client when heartbeat request was sent.
+            If this is way off from the time on the server, then there
+            is a problem and an error will be returned while the client
+            will be disconnected.
+
+        config_version: 
+            Configuration version. Heavy to include, but will help ensure
+            clients are running against the current configuration.
+
+WORKREQUEST: This is the request asking a client to do some work. This
+    will remove the worker from the LRU queue and add it to the wait queue.
+
+    *** Need to plug in how wait queue will work. Maybe this is a good time
+    *** to think about implementing the binary star pattern as an option.
+    *** Optionally brokers could have fallbacks. I think this should be
+    *** hard configured with each broker, that broker responsible for keeping
+    *** it's fallback server up to date. Meaning the fallback broker won't
+    *** subscribe to group ports unless it's activated.
+
+
+    Options:
+        time:
+            Time according to client when heartbeat request was sent.
+            If this is way off from the time on the server, then there
+            is a problem and an error will be returned while the client
+            will be disconnected.
+
+        config_version: 
+            Configuration version. Heavy to include, but will help ensure
+            clients are running against the current configuration.
+
+        work_request_indentifier: This will be the identity of the frontend
+            that made the request and the message id, used for routing.
+
+        body: The body of the request. This is service dependent, Scale0 does
+            not have interest in the data herein.
+
 
 MANAGEMENTREQ: Management requests are commands. They are bundled under this
     flag to make auth checks quicker.
@@ -87,20 +128,21 @@ C = client
 B = broker
 
  - Client startup, broker down:
-* client must be informed of a broker to connect to.
+* client must be informed of a broker to connect to. If it's saving it's config
+* locally it may remember, and also have the group information to fallback on
+* to find a new broker. This will be encouraged for clients, but not required.
 
 C --- CHECKCONFIG ---> B
 No response from B, client fails to start with error.
 
  - Client startup, broker up
-* client must be informed of a broker to connect to.
+* client must be informed of a broker to connect to. If it's saving it's config
+* locally it may remember, and also have the group information to fallback on
+* to find a new broker. This will be encouraged for clients, but not required.
 
 C --- CHECKCONFIG ---> B
 B --- CONFIG ---> C
 C --- READY ---> B
 B --- READYOK ---> C
-C --- HEARTBEAT ---> B
 * It's at this point that the broker registers the client in the LRU queue.
-* The READY and HEARTBEAT establishes that the client and broker have
-* a consistent connection.
 
