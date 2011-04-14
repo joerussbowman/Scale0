@@ -49,6 +49,9 @@ The startup process for a broker will look like this.
  * Maybe I should call out the fact that Workers need to be told to connect.
  * If that's the case maybe turning up the Client socket should be a manual
  * thing?
+ *
+ * OK... looks like the above probably is not going to work. Time to do some
+ * research. Not dumping this until I fully invalidate the idea.
 
 SERVICES
 

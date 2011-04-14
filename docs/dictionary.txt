@@ -40,4 +40,4 @@ Wait Queue: This is the list of Task Id's and what Worker they've been
 
 Task: This is a unit of work that get's routed to a Worker.
 
-Task Reply: This is response from a Worker that gets routed to a Client.
+Task Reply: This is response from a Worker that gets routed to a Client
