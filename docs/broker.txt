@@ -17,10 +17,22 @@ ARCHITECTURE
 *** already typed up. Thought of this today while at work, and I think it
 *** should simplify the broker implementation.
 
+*** The language of choice to developer this initially is Python. As such
+*** I'll be using the multiprocessing library to get around the Global
+*** Interpreter Lock. In other languages it may be possible to use threads,
+*** and take advantage of inproc://, though from what I've read this may not
+*** be the best idea. In Python's case, wasn't really an option so there will
+*** be the ipc:// overhead.
+***
+*** ipc:// might be the overall better answer, the guide even has a comment
+*** premature optimization. Anyway, I've put too much time into this for now
+*** without writing any code. And some point I have to come up with an idea
+*** and either prove or disprove it with code.
+
 Brokers will have two parts, Listeners and Routers. ( I'm not sold on the
 name Listener yet, because it will do more ). At a minimum each Broker will
-consume 2 threads. While it could be written to only consume 1, forcing a 2
-thread minimum will be easier, and consuming only a single core would really
+consume 2 processes. While it could be written to only consume 1, forcing a 2
+process minimum will be easier, and consuming only a single core would really
 only be useful for dev/test implementations.
 
 Listener - The Listener is what will provide the ports Clients and Workers
@@ -28,30 +40,24 @@ connect to and maintain communication with other peers. The Listener will
 manage all configuration related tasks and will push all router/worker
 requests down to Router threads.
 
-Router - Router threads send Tasks to Workers, and send the Task Reply back
+Router - Router processes send Tasks to Workers, and send the Task Reply back
 to the Listener who sends it Client who made the request.
 
 The startup process for a broker will look like this.
  - Listener ioloop started.
  - Listener ioloop connects to any Peers and validates it's config.
- - Listener binds an inproc PUSH socket.
- - Listener kicks off Router ioloops.
+ - Listener binds an ipc PUSH socket.
+ - Listener kicks off Router processes with their own ioloops.
  - Each router ioloop established a PULL socket to the Listener PUSH.
  - Listener validates Routers are connected.
- - Listener binds Worker socket and waits for at least 1 Worker to establish.
- - Listener binds Client socket and starts accepting requests.
+ - Listener creates a zmq_context and binds the Worker XREP socket. 
+* somehow that context is passed to Workers? Need to mess around with this part
+ - Listener waits for Workers to connect, outputs to console as they do.
+ - Once config option for minimum workers is reached, Listener creates a
+    zmq_context for the Clients and binds an XREP socket to it
+* somehow that context is passed to Workers? Need to mess around with this part
+ - At this point the Broker is operational and passing messages.
 
- * Some things here. First, I need to validate that the Router threads can use
- * the Worker socket and share it. 
- *
- * Can inproc do PUSH/PULL?
- *
- * Maybe I should call out the fact that Workers need to be told to connect.
- * If that's the case maybe turning up the Client socket should be a manual
- * thing?
- *
- * OK... looks like the above probably is not going to work. Time to do some
- * research. Not dumping this until I fully invalidate the idea.
 
 SERVICES
 
