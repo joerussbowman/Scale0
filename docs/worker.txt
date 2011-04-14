@@ -1,52 +1,16 @@
-Clients are applications that interact with Scale0. There are requirements
-and protocols that a client must meet and have support for in order to
-interact with a broker.
+[ WORKERS ]
+Workers are applications that accept Tasks from Brokers and send Task replies
+when they are done processing. The requirements for a Worker application are
 
-The first requirement is that the application must support zeromq. All 
-communication to and from the brokers happen via zeromq sockets.
+ - Able to make ZeroMQ REQ or XREQ sockets
+ This is the core way that a Worker accepts tasks. REQ or XREQ depends on the
+ ability of the worker to accept multiple tasks.
 
-Full support for zeromq sockets is include, so tcp, ipc and inproc are all
-acceptable. 
+ - Follow the handshake and heartbeart requirements as follows.
 
-*** note the rest is based off my understanding of zeromq after reading
-the guide. Parts of this may just be plain wrong or even dumb. That's what the
-next phase of actual code development will help prove or disprove. ***
-
-There are three types of clients that can connect to a broker, they are
-defined below with their connection process.
-
-PEER
-Peers are other brokers within the environment. It should be important to note
-that the requirement is that broker meet all protocol requirements, but there
-is no requirement that a broker be one shipped with Scale0. System requirements
-may be as such that a Scale0 broker isn't sufficient. Be it Brokers with
-additional functionality are required, or hardware requirements are as such
-the default broker software(s) will not run. The requirements are only that
-the broker supports zeromq and meets all protocol requirements.
-
-The first, or only, broker in an environment must start with a configuration
-file. When additional brokers are introduced to a running environment they
-must be started with an argument detailing which broker(s) they should connect
-to in order to receive their config. 
-
-*** That connection can include stating which services the broker will provide 
-for if it's intended for specific use. Will detail this below in a bit. ***
-
-FRONTEND
-
-BACKEND
-Connection Process:
-Clients on start will need to make a REQ connection to a broker
-with a CHECKCONFIG request. CHECKCONFIG requests can include optional
-information such as configtype and configversion.
-
-
-If the configversion option passed by the client matches the current
-configversion on the broker the broker will respond with a CONFIGACK. Otherwise
-the broker will reply with a CONFIG response, which will include the config
-
-*** come back here and add example config ***
-
-The client will then make REQ or XREQ to the brokers specificed by the
-config with a READY.
-
+ Initial Connection:
+    Worker connects to the broker it's been told to connect to. It's up to
+    the application developer to determine how an application is told which
+    broker to connect to. This may be a command line switch, or the application
+    can save it's config from a previous run and get the Broker connection
+    information from there. Choice of REQ or XREQ is up to the client

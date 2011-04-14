@@ -9,7 +9,7 @@ While writing documentation to build against I'll have ideas for things that
 should be documented better later. That's what this file is for.
 
 [ PROTOCOL ]
-CHECKCONFIG: When intiating a new connection to a broker a worker must validate 
+GETCONFIG: When intiating a new connection to a broker a worker must validate 
              it's config.
     Parameters:
         config_type:     
@@ -120,7 +120,7 @@ DISCONNECTERROR:
 FORCENEGOTIATE:
     Sent by broker to worker in the event the broker isn't sure if the worker
     is in an acceptable state. Upon getting this message from a broker a worker
-    should initiate CHECKCONFIG.
+    should initiate GETCONFIG.
 
 [ CONNECTIONS ]
 
@@ -133,7 +133,7 @@ B = broker
 * locally it may remember, and also have the group information to fallback on
 * to find a new broker. This will be encouraged for workers, but not required.
 
-C --- CHECKCONFIG ---> B
+C --- GETCONFIG ---> B
 No response from B, worker fails to start with error.
 
  - worker startup, broker up
@@ -141,9 +141,9 @@ No response from B, worker fails to start with error.
 * locally it may remember, and also have the group information to fallback on
 * to find a new broker. This will be encouraged for workers, but not required.
 
-C --- CHECKCONFIG ---> B
-B --- CONFIG ---> C
-C --- READY ---> B
-B --- READYOK ---> C
+C --- GETCONFIG --> B
+C <-- CONFIG -------- B
+C --- READY --------> B
+C <-- READYOK ------- B
 * It's at this point that the broker registers the worker in the LRU queue.
 
