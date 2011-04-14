@@ -37,3 +37,7 @@ Wait Queue: This is the list of Task Id's and what Worker they've been
     assigned to. It's expected that all Workers can accept multiple requests
     at a time, this is primarily used to validate work replies. If a work
     reply is sent and it doesn't exist in this queue, it's dropped quietly.
+
+Task: This is a unit of work that get's routed to a Worker.
+
+Task Reply: This is response from a Worker that gets routed to a Client.

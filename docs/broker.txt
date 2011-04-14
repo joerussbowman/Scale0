@@ -12,6 +12,44 @@ on the zeromq website, [ url goes here, working offline right now ]. The
 other issues Scale0 offers solutions for are reliability, scalability and
 mangement flexibility.
 
+ARCHITECTURE
+*** This design is going to make me need to go back over everything I've
+*** already typed up. Thought of this today while at work, and I think it
+*** should simplify the broker implementation.
+
+Brokers will have two parts, Listeners and Routers. ( I'm not sold on the
+name Listener yet, because it will do more ). At a minimum each Broker will
+consume 2 threads. While it could be written to only consume 1, forcing a 2
+thread minimum will be easier, and consuming only a single core would really
+only be useful for dev/test implementations.
+
+Listener - The Listener is what will provide the ports Clients and Workers
+connect to and maintain communication with other peers. The Listener will
+manage all configuration related tasks and will push all router/worker
+requests down to Router threads.
+
+Router - Router threads send Tasks to Workers, and send the Task Reply back
+to the Listener who sends it Client who made the request.
+
+The startup process for a broker will look like this.
+ - Listener ioloop started.
+ - Listener ioloop connects to any Peers and validates it's config.
+ - Listener binds an inproc PUSH socket.
+ - Listener kicks off Router ioloops.
+ - Each router ioloop established a PULL socket to the Listener PUSH.
+ - Listener validates Routers are connected.
+ - Listener binds Worker socket and waits for at least 1 Worker to establish.
+ - Listener binds Client socket and starts accepting requests.
+
+ * Some things here. First, I need to validate that the Router threads can use
+ * the Worker socket and share it. 
+ *
+ * Can inproc do PUSH/PULL?
+ *
+ * Maybe I should call out the fact that Workers need to be told to connect.
+ * If that's the case maybe turning up the Client socket should be a manual
+ * thing?
+
 SERVICES
 
 Scale0 brokers will provide the following services:
