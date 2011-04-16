@@ -9,7 +9,7 @@ While writing documentation to build against I'll have ideas for things that
 should be documented better later. That's what this file is for.
 
 [ PROTOCOL ]
-GETCONFIG: When intiating a new connection to a broker a worker must validate 
+CONNECT: When intiating a new connection to a broker a worker must validate 
              it's config.
     Parameters:
         config_type:     
@@ -35,26 +35,14 @@ route the worker to a new broker, setting it as it's preferred broker. If
 there is an issue with a broker and it's restarted maybe it should connect
 the worker to tell it to switch back? ****
 
-READY: This tells the Broker that the worker is availble for new
-       connections. It's at this point that the worker is added to the 
-       LRU queue. 
-    Parameters:
-        services:
-            Services the worker accepts requests for.
 
+PING: This is the standard heartbeat request. When a Broker receives a PING
+    from a Worker it will add it to the LRU queue if it's not already in it.
+    Parameters:
         heartbeat_interval:
             The interval at which the broker can expect heartbeat requests
             from the worker. 
 
-        time: The current worker time.
-
-        config_version: The version of config running on the worker.
-
-READYOK: This is a reply to a READY request, it is the acknowledgement from
-    broker so that the worker knows the broker is working correctly.
-
-PING: This is the standard heartbeat request.
-    Parameters:
         time:
             Time according to worker when heartbeat request was sent.
             If this is way off from the time on the server, then there
@@ -120,7 +108,7 @@ DISCONNECTERROR:
 FORCENEGOTIATE:
     Sent by broker to worker in the event the broker isn't sure if the worker
     is in an acceptable state. Upon getting this message from a broker a worker
-    should initiate GETCONFIG.
+    should initiate CONNECT.
 
 [ CONNECTIONS ]
 
@@ -133,17 +121,17 @@ B = broker
 * locally it may remember, and also have the group information to fallback on
 * to find a new broker. This will be encouraged for workers, but not required.
 
-C --- GETCONFIG ---> B
+C --- CONNECT ---> B
 No response from B, worker fails to start with error.
 
  - worker startup, broker up
 * worker must be informed of a broker to connect to. If it's saving it's config
 * locally it may remember, and also have the group information to fallback on
 * to find a new broker. This will be encouraged for workers, but not required.
-
-C --- GETCONFIG --> B
-C <-- CONFIG -------- B
-C --- READY --------> B
-C <-- READYOK ------- B
+C ------CONNECT ----> B
+C <---- CONFIG ------ B
+C ----- PING -------> B
+C <---- PONG -------- B
+ 
 * It's at this point that the broker registers the worker in the LRU queue.
 

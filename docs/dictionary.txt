@@ -9,6 +9,12 @@ Fallback Broker: Fallback Brokers are an optional class of brokers. They can
     together, preferably with a cross over cable. See the binary star pattern
     discussed in the ZeroMQ guide for more information.
 
+Dispatcher: The Broker application piece that handles the Client and Worker
+    ports as well as handles configuration management for the Broker.
+
+Router: This is the Broker application piece that the Dispatcher passes
+    Tasks to. This handles the LRU and Wait Queues.
+
 Peer: Special term for referring to Brokers when there is Broker to Broker
     communication.
 

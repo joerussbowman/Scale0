@@ -29,31 +29,31 @@ ARCHITECTURE
 *** without writing any code. And some point I have to come up with an idea
 *** and either prove or disprove it with code.
 
-Brokers will have two parts, Listeners and Routers. ( I'm not sold on the
-name Listener yet, because it will do more ). At a minimum each Broker will
+Brokers will have two parts, Dispatchers and Routers. ( I'm not sold on the
+name Dispatcher yet, because it will do more ). At a minimum each Broker will
 consume 2 processes. While it could be written to only consume 1, forcing a 2
 process minimum will be easier, and consuming only a single core would really
 only be useful for dev/test implementations.
 
-Listener - The Listener is what will provide the ports Clients and Workers
-connect to and maintain communication with other peers. The Listener will
+Dispatcher - The Dispatcher is what will provide the ports Clients and Workers
+connect to and maintain communication with other peers. The Dispatcher will
 manage all configuration related tasks and will push all router/worker
 requests down to Router threads.
 
 Router - Router processes send Tasks to Workers, and send the Task Reply back
-to the Listener who sends it Client who made the request.
+to the Dispatcher who sends it Client who made the request.
 
 The startup process for a broker will look like this.
- - Listener ioloop started.
- - Listener ioloop connects to any Peers and validates it's config.
- - Listener binds an ipc PUSH socket.
- - Listener kicks off Router processes with their own ioloops.
- - Each router ioloop established a PULL socket to the Listener PUSH.
- - Listener validates Routers are connected.
- - Listener creates a zmq_context and binds the Worker XREP socket. 
+ - Dispatcher ioloop started.
+ - Dispatcher ioloop connects to any Peers and validates it's config.
+ - Dispatcher binds an ipc PUSH socket.
+ - Dispatcher kicks off Router processes with their own ioloops.
+ - Each router ioloop established a PULL socket to the Dispatcher PUSH.
+ - Dispatcher validates Routers are connected.
+ - Dispatcher creates a zmq_context and binds the Worker XREP socket. 
 * somehow that context is passed to Workers? Need to mess around with this part
- - Listener waits for Workers to connect, outputs to console as they do.
- - Once config option for minimum workers is reached, Listener creates a
+ - Dispatcher waits for Workers to connect, outputs to console as they do.
+ - Once config option for minimum workers is reached, Dispatcher creates a
     zmq_context for the Clients and binds an XREP socket to it
 * somehow that context is passed to Workers? Need to mess around with this part
  - At this point the Broker is operational and passing messages.
@@ -67,13 +67,13 @@ Service Discovery: In order to meet the requirements of being service
 agnostic, service discovery will need to be built in. Worker clients will
 be able to state the serivce(s) they provide on connection to the network
 and change that configuration realtime. Other core services will be built
-on this framework. 
+on this framework. This is handled by the Dispatcher.
 
 Configuration: A peer or client on startup should only need to be informed
 of at least one broker to connect to. It will the request the configuration
 it needs on startup. Not all brokers will be required to provide 
 configuration services. However, at least one server per network will need
-to provide the service.
+to provide the service. This is handled by the Dispatcher.
 
 Heartbeat: Heartbeat will be the way that clients and peers are monitored
 for availability. This will also be used to keep a configuration up to
@@ -81,19 +81,8 @@ date on configuration service brokers. Heartbeat service servers can be
 configured to share their heartbeat table with other peers using push or
 pull. For example, in a active/standby peer topology the master can receive
 all heartbeart information and share it with the standby. Pull can be used
-by peers requesting information about available workers clients.
-
-Management: A built in http management server for the broker and network.
-A command line mode will exist where the administrator can view and make
-network level changes. Features will include listing all peers and clients,
-the services offered and current state. Optionally some data can pushed
-to remote services, useful for trending for example. Scale0 should ship
-with an availble http based management front end, which should be disabled
-by default. Security vs ease of administration should be an exercise left
-for the maintainers of the network. [ this will need to be defined better
-later ].
-
-Brokers can define which services they provide services for, including
-builtins or backend specified services.
+by peers requesting information about available workers clients. These
+requests wil be recieved by the Dispatcher and passed to Routers like any
+other Task.
 
 CONFIGURATION

@@ -2,7 +2,7 @@
 Workers are applications that accept Tasks from Brokers and send Task replies
 when they are done processing. The requirements for a Worker application are
 
- - Able to make ZeroMQ REQ or XREQ sockets
+ - Able to make ZeroMQ REQ sockets
  This is the core way that a Worker accepts tasks. REQ or XREQ depends on the
  ability of the worker to accept multiple tasks.
 
@@ -13,4 +13,23 @@ when they are done processing. The requirements for a Worker application are
     the application developer to determine how an application is told which
     broker to connect to. This may be a command line switch, or the application
     can save it's config from a previous run and get the Broker connection
-    information from there. Choice of REQ or XREQ is up to the client
+    information from there. Choice of REQ or XREQ is up to the client.
+
+    An example connection looks like this.
+
+    C ------CONNECT ----> B
+    C <---- CONFIG ------ B
+    C ----- PING -------> B
+    C <---- PONG -------- B
+
+    It's important to note that the PING is necessary to start receiving
+    requests. This informs the Broker that the application is ready to take
+    another Task.
+
+    If the Worker is Asynchronous it should send a new PING immediately on
+    receipt of a Task. This will allow the Broker to keep feeding the Worker
+    Tasks as fast as it can. This also allows the developer of the Worker
+    application to manage load internally. If the Worker is self aware enough
+    to know when it should not be accepting more Tasks, it can simply not send
+    a PING until it is ready.
+   
