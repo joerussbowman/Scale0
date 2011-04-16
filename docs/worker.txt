@@ -1,4 +1,4 @@
-[ WORKERS ]
+[ WORKER ]
 Workers are applications that accept Tasks from Brokers and send Task replies
 when they are done processing. The requirements for a Worker application are
 
@@ -17,10 +17,10 @@ when they are done processing. The requirements for a Worker application are
 
     An example connection looks like this.
 
-    C ------CONNECT ----> B
-    C <---- CONFIG ------ B
-    C ----- PING -------> B
-    C <---- PONG -------- B
+    W ------CONNECT ----> B
+    W <---- CONFIG ------ B
+    W ----- PING -------> B
+    W <---- PONG -------- B
 
     It's important to note that the PING is necessary to start receiving
     requests. This informs the Broker that the application is ready to take
@@ -32,4 +32,8 @@ when they are done processing. The requirements for a Worker application are
     application to manage load internally. If the Worker is self aware enough
     to know when it should not be accepting more Tasks, it can simply not send
     a PING until it is ready.
+
+For more information about other responses please see the protocol document.
+It's expected that all Workers will be able to handle all error codes for
+example.
    

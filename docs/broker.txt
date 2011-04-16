@@ -1,12 +1,6 @@
 The broker is the core of the Scale0 project. It provides the application
 logic and standards for peer and client connections. 
 
-Peers are defined as other applications acting in the broker role, whether
-they are other Scale0 brokers or provided by other means.
-
-Clients are be frontends or backends, or coming from zeromq documentation
-clients or workers.
-
 Every attempt is made to stay in accord with any standards that exist
 on the zeromq website, [ url goes here, working offline right now ]. The
 other issues Scale0 offers solutions for are reliability, scalability and

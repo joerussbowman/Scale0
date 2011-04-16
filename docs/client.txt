@@ -1,0 +1,19 @@
+[ CLIENT ]
+Clients are the applications that generate Tasks and send them to the Broker
+for processing. These are the classic frontend applications. The requirement
+for the frontend are to be able to support ZeroMQ REQ or XREQ connections and
+follow protocol requirements for a Client.
+
+An example connection would look like this.
+
+C ------TASK ----> B
+C <-- TASKREPLY -- B
+
+Brokers will also accept PING requests and reply with PONG in order for the
+Client to determine if the Broker is available. NEEDBROKER requests can be
+sent to the Broker in order to get a new Broker if the Broker is available to
+serivce that request.
+
+For more information about other responses please see the protocol document.
+It's expected that all Clients will be able to handle all error codes for
+example.

@@ -1,12 +1,7 @@
 Keeping the configuration within the environment up to date. The premise
 that this system is built on is that for the most part the config will be
-stable. That is new brokers and clients will not be added and removed
+stable. That is new brokers and Workers will not be added and removed
 a lot, and config changes by admins will be rare.
-
-*** OK, now this has me thinking that consistency of one monolithic
-config is going to be a nightmare. I need to rethink this. I think
-there needs to be a group_config and broker_config fully separate. The
-way it's laid out below it's still possible. ***
 
 When a config change is made, it will be sent on the PUB/SUB config
 network. All brokers with the config service can PUB. All brokers should
@@ -18,31 +13,31 @@ check the hash of it's config against the published one.
 
 *** Not sure what to do if the hashes don't match yet. Conflict resolution
 could happen here and then it could push. Conflict resolution measures could
-be a bit complicated though. Maybe I should rename group to family :) ***
+be a bit complicated though. ***
 
-[ CLIENT CONFIG ]
-This is config that each client stores. Both identity and services should
+[ WORKER CONFIG ]
+This is config that each worker stores. Both identity and services should
 be sent with a CHECKCONFIG request.
 
 identity:
-    unique identifier for this client
+    unique identifier for this Worker
 
 services:
-    List of services processed by the client.
+    List of services processed by the Worker.
 
-group_config:
-    config (including fallback group config) for group
+family_config:
+    config (including fallback family config) for family
 
 prefered_broker: 
-    This is the broker that the client should attempt to connect to.
+    This is the broker that the Worker should attempt to connect to.
     If it is unable to connect to this broker it should send a NEEDBROKER
-    request to another broker in the group_config if any exist.
+    request to another broker in the family_config if any exist.
 
 
 [ BROKER CONFIG ]
 This details all the information a brokers require for operation. Not all
-options need to be pushed to clients. What options are required for clients
-is detailed in the [ CLIENT CONFIG ] section above.
+options need to be pushed to Workers. What options are required for Workers
+is detailed in the [ Worker CONFIG ] section above.
 
 identity:
     unique identifier for this broker
@@ -73,7 +68,7 @@ peers: List of peer sockets to communicate with. This is the port used for
     heartbeat and work status communication.
 
 default_heartbeat_interval:
-    Clients can negotiate a longer heartbeat interval, but not a shorter one.
+    Workers can negotiate a longer heartbeat interval, but not a shorter one.
 
 services: 
     list of services managed by the broker, or all
@@ -84,36 +79,36 @@ LRU:
         services: list of services the backend supports
         last_heartbeat: used to determine if the backend is alive or not.
 
-error_clients:
-    If due to a configuration issue or some other problem a client is
-    repeatedly not negotiating correctly a client can be ignored as much
+error_Workers:
+    If due to a configuration issue or some other problem a Worker is
+    repeatedly not negotiating correctly a Worker can be ignored as much
     as is possible with zeromq. 
 
-group:
-    This option may be blank, if groups aren't used in the network. Otherwise
-    this is a single item for the group a broker is a member of.
+family:
+    This option may be blank, if families aren't used in the network. Otherwise
+    this is a single item for the family a broker is a member of.
 
-fallback_groups:
-    While a broker may be a member of only one group, it can have several
-    fallback groups. Fallback groups are used to route clients to in the event
-    that the primary group is unable to process it's request.
+fallback_families:
+    While a broker may be a member of only one family, it can have several
+    fallback families. Fallback families are used to route Workers to in the event
+    that the primary family is unable to process it's request.
 
-group_config:
-    This is a list of group configs. The Broker should have it's own group
-    config plus any fallback group configs as well. See [ GROUP CONFIG ]
-    below for group config options.
+family_config:
+    This is a list of family configs. The Broker should have it's own family
+    config plus any fallback family configs as well. See [ FAMILY CONFIG ]
+    below for family config options.
 
-[ GROUP CONFIG ]
+[ FAMILY CONFIG ]
 
 name:
-    Unique name for the group.
+    Unique name for the family.
 
 brokers:
-    List of brokers in the group. Includes:
+    List of brokers in the family. Includes:
         identity: broker identity
         services: services served by broker
         config_sub_port: Port to subscribe to for config updates 
 
 admins:
     List of username and 1 way hashed passwords used for administration of the
-    group.
+    family.
