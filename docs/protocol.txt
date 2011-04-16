@@ -1,0 +1,100 @@
+[ PROTOCOL ]
+CONNECT: When intiating a new connection to a broker a worker must validate 
+             it's config.
+    Parameters:
+        config_type:     
+            The format the worker accepts the config in. Can be JSON, XML
+            or ZFL.
+
+If the application already has a config, it will also pass a configversion
+option.
+
+CONFIG - Broker reply with configuration. This will be sent after CONNECT
+    requests and when the Broker needs to inform the Worker of new CONFIG.
+    Parameters:
+        config_type:
+            The format the config is in.
+        config:
+            The config.
+
+NEEDBROKER - In the event that a worker is unable to connect to it's prefered
+broker, it may try to connect to another one with a NEEDBROKER request. This
+will include the worker identity and services offered. 
+
+CHANGEBROKER - This is a reply back to a Worker or Client REQ/XREQ socket 
+    telling it to connect to a different Broker. This can be a response to a 
+    NEEDBROKER request or used when a Broker needs to push the Worker to 
+    another Broker, say if it's coming down for maintenance or other reasons.
+
+PING: This is the standard heartbeat request. When a Broker receives a PING
+    from a Worker it will add it to the LRU queue if it's not already in it.
+    Parameters:
+        heartbeat_interval:
+            The interval at which the broker can expect heartbeat requests
+            from the worker. 
+
+        time:
+            Time according to worker when heartbeat request was sent.
+            If this is way off from the time on the server, then there
+            is a problem and an error will be returned while the worker
+            will be disconnected.
+
+        config_version: 
+            Configuration version.
+
+PONG: This is the response to PING
+    Parameters:
+        time:
+            Time on the Broker when the request was sent. This can be used
+            to help keep servers in sync. This can also be used by the Worker
+            to determine if it's slow in processing requests so it can stop
+            sending PINGs if it's overloaded.
+
+        config_version: 
+            Configuration version.
+
+TASK: This is the request asking a worker to do some work. This
+    will remove the worker from the LRU queue and add it to the wait queue.
+    Parameters:
+
+        time:
+            Time according to worker when heartbeat request was sent.
+            If this is way off from the time on the server, then there
+            is a problem and an error will be returned while the worker
+            will be disconnected.
+
+        config_version: 
+            Configuration version.
+
+        id: This will be the identity of the frontend
+            that made the request and the message id, used for routing.
+
+        body: The body of the request.
+
+TASKREPLY: This is the reply to a work request. The broker won't care about any
+    errors about the work request, it will be up to the frontend to manage that.
+
+ERROR:
+    These are the Error codes a server may return to a client. These are based
+    on HTTP status codes.
+        301: Moved Permanently: Sent to Worker and Clients when the Broker
+            needs them to move to another Broker. The Worker can expect a
+            NEEDBROKER request to function correctly from the Broker.
+        426: Upgrade Required. Sent when the Worker is sending a config version
+            different from the Brokers. The Broker should issue a CONNECT to
+            get the new config.
+        444: No Response Message. Used when the Broker believes the client
+            is malware.
+        501: Not Implemented. Sent when the Worker or Client sends a request
+            the server doesn't expect or isn't aware of.
+        503: Service Unavailable. Sent when the Broker is not accepting
+            connections. A Worker may attempt a NEEDBROKER request to see
+            if it can be redirected. If this is supplied in response to a
+            NEEDBROKER request the Worker should not retry.
+
+FORCENEGOTIATE:
+    Sent by broker to worker in the event the broker isn't sure if the worker
+    is in an acceptable state. Upon getting this message from a broker a worker
+    should initiate CONNECT.
+
+
