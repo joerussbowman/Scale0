@@ -1,3 +1,6 @@
+* Been working scratchpad, this is out of date from actual implementation
+* now. Needs updating.
+
 The broker is the core of the Scale0 project. It provides the application
 logic and standards for peer and client connections. 
 

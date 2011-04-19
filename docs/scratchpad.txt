@@ -33,3 +33,101 @@ C <---- PONG -------- B
  
 * It's at this point that the broker registers the worker in the LRU queue.
 
+[ DIAGRAMS ]
+* Simple text diagrams of what I'm thinking about for implementation. I've been
+* tossing around a lot of ideas in my head and just want to get them down where
+* I can look at them.
+
+
+                     [ FE XREP ]       [ BE XREP ]
+                            --------------
+                            | Dispatcher |
+                            --------------
+                     [ TASK PUSH ]  [ ROUTER XREP ]   
+
+
+
+     [ TASK PULL ]  [ ROUTER XREQ ]    [ TASK PULL ]  [ ROUTER XREQ ]
+             ----------                      ----------  
+             | Router |                      | Router | 
+             ----------                      ----------
+
+
+Dispatcher: The purpose of this process is to accept and get rid of tasks
+    as quickly as possible. Tasks could be the core Task processing objects
+    coming in from a front end, or configuration management requests from a
+    router. LRU and Wait Queues are stored in this object. Communication 
+    outside of the broker happens via the XREP listeners, which are usually
+    tcp. Internal requests to the router happen via the PUSH and XREP sockets.
+    These would usually be ipc.
+
+    The Dispatcher acts as a global state object for the entire application,
+    which helps avoid conflicts in configuration and queue management within
+    a single broker.
+
+    * The Dispatcher should not need to process any message, message processing
+    * will be delegated to a Router for everything.
+
+Router: Routers are single process applications that handle whatever process of
+    tasks are required. Any data parsing or other "thinking" should be handled
+    here, as these can be load balanced across cores. The idea is to run one 
+    Router per available core. For example on a 6 core system you could expect
+    1 core for the OS, 1 core for the Dispatcher and then 4 cores left for 
+    Router objects. That's a very simple factoring and can likely be adjusted
+    up or down. Likely you can get more Routers on a 6 core box and see a
+    benefit depending on what the traffic actually looks like. 
+
+
+[ MESSAGE FORMAT ]
+
+Figuring out the Message Format makes sense. Using pyzmq Pickle and JSON is
+bundled in, going to use JSON just to make it more portable, allowing for
+integration with other languages to act as Routers (or Dispatcher but that's
+mainly irrelevant since the Dispatcher doesn't parse anything). Since
+all message passing happens on libzmq sockets, it should be possible to write
+or embed Dispatchers and Routers in other applications. 
+
+* This has a strong change of changing once the application starts being
+* written.
+
+Messages are multipart messages. Since the idea is for the Dispatcher to not
+parse anything at all, this can simply be left at 2 parts. Header and Body.
+The Header will be information about the message and relevant to all processing
+done by the Router, the body will be the actual message that gets passed to the
+application (Worker or Client).
+
+Header: Simple JSON formatted object with basic routing information.
+    Some examples:
+
+    Incoming request, passed from Client through Dispatch to Router:
+    {
+        "request": "TASK",
+        "message_id: "",
+        "service": "www.mydomain.com",
+        "type": "REQUEST"
+    }
+
+    The Router can then take this request, add a message_id and send it on
+    it's way to the Worker. It will also pass the message_id up to the
+    Dispatcher which can then plug it into the Wait Queue.
+
+    The Worker can then do what it needs to do, then send a message back with
+    the header:
+    {
+        "request": "TASK",
+        "message_id: "C4529276-BF5C-4502-BDF3-DF32B122D055",
+        "service": "www.mydomain.com",
+        "type": "RESPONSE"
+    }
+
+    The Dispatcher would send this to the Router. The Router would send a Wait
+    Queue delete request to the Dispatcher. The Dispatcher will determine if
+    message_id exists in the Queue, deleting it if it does and return a true/
+    false request to the Router. If the message existed and was therefore
+    deleted then the Router will pass the message up to the Dispatcher on
+    it's PUSH socket, the Dispatcher will then send it up to the Client.
+
+    * ok, how does the Dispatcher know which Client to send it to. Perhaps the
+    * RESPONSE Tasks going to a Client need to have some sort of quick
+    * addressing the Dispatcher can use without having to parse a JSON string.
+    * Need to think about this more and also have to stop working on this now.
