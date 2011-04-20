@@ -131,3 +131,6 @@ Header: Simple JSON formatted object with basic routing information.
     * RESPONSE Tasks going to a Client need to have some sort of quick
     * addressing the Dispatcher can use without having to parse a JSON string.
     * Need to think about this more and also have to stop working on this now.
+    *
+    * Reading chapter 3 of the guide again. I think router/dealer sockets will
+    * handle this for the most part. Might be time to write a test program.
