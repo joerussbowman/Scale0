@@ -43,11 +43,11 @@ C <---- PONG -------- B
                             --------------
                             | Dispatcher |
                             --------------
-                     [ TASK XREP ]  [ ROUTER SUB ]   
+                            [ ROUTER XREP ]   
 
 
 
-     [ TASK XREQ ]  [ ROUTER PUB ]    [ TASK XREQ ]  [ ROUTER PUB ]
+           [ ROUTER XREQ ]                 [ ROUTER XREQ ]
              ----------                      ----------  
              | Router |                      | Router | 
              ----------                      ----------
