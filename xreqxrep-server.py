@@ -32,8 +32,6 @@ class Worker():
     how they work.
     """
     def __init__(self, connect_to):
-        if not connect_to:
-
         self.my_id = str(uuid.uuid4())
         self.context = zmq.Context()
         self.broker_socket = context.socket(zmq.XREQ)
@@ -57,7 +55,27 @@ class Worker():
 
                 broker_socket.send_json(message)
 
+class Dispatcher():
+    def __init__(self, client_socket, worker_socket, router_socket,
+            my_id=str(uuid.uuid4())):
+        self.my_id = my_id
+        self.context = zmq.Context()
 
+        self.client_socket = context.socket(zmq.XREP)
+        self.worker_socket = context.socket(zmq.XREP)
+        self.router_socket = context.socket(zmq.XREP)
+
+        self.LRU = []
+        self.WQ = []
+
+        self.client_socket.setsockopt(zmq.IDENTITY, "%s-C" % self.my_id)
+        self.worker_socket.setsockopt(zmq.IDENTITY, "%s-W" % self.my_id)
+        self.router_socket.setsockopt(zmq.IDENTITY, "%s-R" % self.my_id)
+
+        #TODO should pass ip and ports to Dispatcher. Maybe router ipc as well
+        self.client_socket.bind("tcp://127.0.0.1:8080" % self.my_id)
+        self.worker_socket.bind("tpc://127.0.0.1:8081" % self.my_id)
+        self.router_socket.bind("ipc:///var/tmp/%s-R" % self.my_id)
     
 
             
