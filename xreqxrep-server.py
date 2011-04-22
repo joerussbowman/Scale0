@@ -18,32 +18,47 @@
 
 import sys
 import zmq
-import json
-from  multiprocessing import Process
+import uuid
+from zmq import devices
+from multiprocessing import Process
 
-# Make up some imaginary workers, these would normally be separate boxes.
-def worker_process():
-    # go ahead and set up their own context.
-    context = zmq.Context()
-    worker_socket = context.socket(zmq.XREQ)
+class Worker():
+    """
+    Normally these would be separate programs, these are included for testing
+    purposes right now. The goal is that this could eventually grow into a
+    class that others can use in their applications.
 
-    # could use ipc here, but simulating actual worker
-    worker_socket.connect("tcp://127.0.0.1:9999")
+    Not really focused on that now. Right now just trying things out to see
+    how they work.
+    """
+    def __init__(self, connect_to):
+        if not connect_to:
 
-    poller = zmq.Poller()
-    poller.register(worker_socket, zmq.POLLIN)
+        self.my_id = str(uuid.uuid4())
+        self.context = zmq.Context()
+        self.broker_socket = context.socket(zmq.XREQ)
 
-    while True:
-        sock = dict(poller.poll())
+        broker_socket.setsockopt(zmq.IDENTITY, self.zmq_id)
+        broker_socket.connect(connect_to)
 
-        if sock.get(worker_socket) == zmq.POLLIN:
-            multi_message = worker_socket.recv_multipart()
-            task = json.loads(multi_message[1])
- 
-            task["reply"] = "Got: %s" % task["request"]
+        poller = zmq.Poller()
+        poller.register(broker_socket, zmq.POLLIN)
 
-            # next steps are to put the multipart message back together
-            # and send it to the Client. 
+        while True:
+            sock = dict(poller.poll())
+
+            if sock.get(broker_socket) == zmq.POLLIN:
+                multi_message = work_receiver.recv_multipart()
+                message = json.loads(multi_message[1])
+                # This worker just adds a reply with the same content
+                # as the request. This way we can verify the replies
+                # are matching.
+                message["reply"] = "%s" % (message["request"])
+
+                broker_socket.send_json(message)
+
+
+    
 
             
     
