@@ -1,5 +1,4 @@
-Note: This README will change to a better project description once
-there is actual code to support it.
+Note: This project is going on hold for a while. Explanatory blog post here - http://joerussbowman.tumblr.com/post/4930274872/better-gas-mileage-car-putting-scale0-on-hold
 
 Scale0 is a project to create a protocol and language agnostic
 infrastructure framework for scaling, using zeromq. Right now the
