@@ -1,6 +1,10 @@
 Note: This project is going on hold for a while. Explanatory blog post here :
 http://joerussbowman.tumblr.com/post/4930274872/better-gas-mileage-car-putting-scale0-on-hold
 
+Update: I've decided base on reading that Erlang might make the most sense for this application.
+As I don't currently know Erlang, I'm going to read up on it while on vacation and work on this
+when I get back.
+
 Scale0 is a project to create a protocol and language agnostic
 infrastructure framework for scaling, using zeromq. Right now the
 plan is to implement a broker based system similar to the first
