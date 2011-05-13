@@ -42,10 +42,6 @@ PING: This is the standard heartbeat request. When a Broker receives a PING
         config_version: 
             Worker only, configuration version.
 
-        type: Added by the Dispatcher, this will be Client or Worker depending 
-        on which socket the PING comes in on. If it's a Client it will not be
-        added to the LRU Queue.
-
 PONG: This is the response to PING
     Parameters:
         time:
