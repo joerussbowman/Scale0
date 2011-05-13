@@ -19,6 +19,7 @@
 import sys
 import zmq
 import uuid
+import tnetstrings
 from zmq import devices
 
 class Worker():
@@ -39,13 +40,14 @@ class Worker():
         self.my_id = str(uuid.uuid4())
         self.context = zmq.Context()
         self.broker_socket = context.socket(zmq.REQ)
-        self.listener_socket = context.socket(zmq.REP)
+        self.listener_socket = context.socket(zmq.ROUTER)
 
         self.broker_socket.setsockopt(zmq.IDENTITY, self.zmq_id)
         self.broker_socket.connect(connect_to)
 
         poller = zmq.Poller()
         poller.register(broker_socket, zmq.POLLIN)
+        poller.register(listener_socket, zmq.POLLIN)
 
         while True:
             sock = dict(poller.poll())
@@ -78,8 +80,10 @@ class Dispatcher():
     def __init__(self, 
             client_socket_uri="tcp://127.0.0.1:8080", 
             worker_socket_uri="tcp://127.0.0.1:8081", 
-            router_socket_base="ipc:///var/tmp/",
-            my_id=str(uuid.uuid4())):
+            dispatcher_socket_base="ipc:///var/tmp/",
+            router_response_socket_base="ipc:///var/tmp/",
+            my_id=str(uuid.uuid4()),
+            routers=2):
 
         self.my_id = my_id
         self.LRU = []
@@ -88,28 +92,67 @@ class Dispatcher():
 
         self.client_socket = context.socket(zmq.ROUTER)
         self.worker_socket = context.socket(zmq.ROUTER)
-        self.router_socket = context.socket(zmq.PUSH) #internally use push/pull 
+        self.dispatcher_socket = context.socket(zmq.PUSH)  
+        self.router_response_socket = context.socket(zmq.SUB)   
 
         self.client_socket.setsockopt(zmq.IDENTITY, "%s-client" % self.my_id)
         self.worker_socket.setsockopt(zmq.IDENTITY, "%s-worker" % self.my_id)
-        self.router_socket.setsockopt(zmq.IDENTITY, "%s-router" % self.my_id)
+        self.dispatcher_socket.setsockopt(zmq.IDENTITY, 
+                "%s-dispatcher" % self.my_id)
+        self.router_response_socket.setsockopt(zmq.IDENTITY, 
+                "%s-router" % self.my_id)
 
         self.client_socket.bind(client_socket_uri)
         self.worker_socket.bind(worker_socket_url)
-        self.router_socket.bind("%s/%s_router_listener" % (router_socket_base, self.my_id)
-    
+        self.dispatcher_socket.bind("%s/%s_dispatcher" % (dispatcher_socket_base, 
+            self.my_id)
+        self.router__response_socket.bind("%s/%s_router_response" % (
+            router_response_socket_base, self.my_id)
+
+        poller = zmq.Poller()
+        poller.register(client_socket, zmq.POLLIN)
+
+        while True:
+            sock = dict(poller.poll())
+
+            if sock.get(client_socket) == zmq.POLLIN:
+                multi_message = client_socket.recv_multipart()
+
+
 
 class Router():
+    """ stub of how I think it will work, stopping this and going
+    to just manage everything with the dispatcher at first. This is getting a
+    bit complicated and I want to stop and do one thing at a time"""
+
     def__init__(self, context, 
             dispatcher_socket_uri,
+            router_response_socket_uri,
+            port,
             my_id=str(uuid.uuid4())):
+
         self.context = context
         self.my_id = my_id
         self.context = context
-        self.wait_queue = [] # Used to avoid processing responses not requested
 
         self.dispatcher_socket = context.socket(zmq.PULL)
+        self.dispatcher_socket.setsockopt(zmq.IDENTITY, "%s-router" % self.my_id)
         self.dispatcher_socket.connect(dispatcher_socket_uri)
+
+        self.response_socket = context.socket(zmq.ROUTER)
+        self.dispatcher_socket.setsockopt(zmq.IDENTITY, 
+            "%s-router-response" % self.my_id)
+        self.dispatcher_socket.bind(
+
+        poller = zmq.Poller()
+        poller.register(dispatcher_socket, zmq.POLLIN)
+
+        while True:
+            sock = dict(poller.poll())
+
+            if sock.get(dispatcher_socket) == zmq.POLLIN:
+                multi_message = work_receiver.recv_multipart()
+                transport = json.loads(multi_message[0])
 
 
 
