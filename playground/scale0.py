@@ -21,6 +21,7 @@ import zmq
 import uuid
 import tnetstrings
 from zmq import devices
+from  multiprocessing import Process
 
 class Worker():
     """
@@ -40,7 +41,7 @@ class Worker():
         self.my_id = str(uuid.uuid4())
         self.context = zmq.Context()
         self.broker_socket = context.socket(zmq.REQ)
-        self.listener_socket = context.socket(zmq.ROUTER)
+        self.listener_socket = context.socket(zmq.XREP)
 
         self.broker_socket.setsockopt(zmq.IDENTITY, self.zmq_id)
         self.broker_socket.connect(connect_to)
@@ -105,10 +106,10 @@ class Dispatcher():
 
         self.context = zmq.Context()
 
-        self.client_socket = context.socket(zmq.ROUTER)
-        self.worker_socket = context.socket(zmq.ROUTER)
-        self.dispatcher_socket = context.socket(zmq.PUSH)  
-        self.router_response_socket = context.socket(zmq.SUB)   
+        self.client_socket = self.context.socket(zmq.XREP)
+        self.worker_socket = self.context.socket(zmq.XREP)
+        self.dispatcher_socket = self.context.socket(zmq.PUSH)  
+        self.router_response_socket = self.context.socket(zmq.SUB)   
 
         self.client_socket.setsockopt(zmq.IDENTITY, "%s-client" % self.my_id)
         self.worker_socket.setsockopt(zmq.IDENTITY, "%s-worker" % self.my_id)
@@ -118,21 +119,35 @@ class Dispatcher():
                 "%s-router" % self.my_id)
 
         self.client_socket.bind(client_socket_uri)
-        self.worker_socket.bind(worker_socket_url)
-        self.dispatcher_socket.bind("%s/%s_dispatcher" % (dispatcher_socket_base, 
-            self.my_id))
-        self.router_response_socket.bind("%s/%s_router_response" % (
-            router_response_socket_base, self.my_id))
+        self.worker_socket.bind(worker_socket_uri)
+        self.dispatcher_uri = "%s/%s_dispatcher" % (dispatcher_socket_base, 
+            self.my_id)
+        self.dispatcher_socket.bind(self.dispatcher_uri)
+        self.router_response_uri = "%s/%s_router_response" % (
+            router_response_socket_base, self.my_id)
+        self.router_response_socket.bind(self.router_response_uri)
 
         poller = zmq.Poller()
-        poller.register(client_socket, zmq.POLLIN)
+        poller.register(self.client_socket, zmq.POLLIN)
+
+        # get the routers started before we start the loop
+        print 'Starting %s routers' % routers
+
+        router = 0
+        while (router < routers):
+            Process(target=Router, args=(self.context, 
+                self.dispatcher_uri,
+                self.router_response_uri)).start()
+            router = router + 1
+
+        print "Routers started, starting Dispatcher loop"
 
         while True:
             sock = dict(poller.poll())
 
             if sock.get(worker_socket) == zmq.POLLIN:
                 # from the worker we are expecting a multipart message,
-                # part0 = protocol command, part1 = rest
+                # part0 = protocol command, part1 = request
                 message_parts = worker_socket.recv_multipart()
                 (command, request) = message_parts
                 if command.upper() == "PING":
@@ -142,13 +157,14 @@ class Dispatcher():
                     # TODO: validate time here
                     self.LRU.append({"connection": uri, 
                         "services": services.split(",")})
+                    print "Worker %s PING" % uri
 
             if sock.get(client_socket) == zmq.POLLIN:
                 # from the client we are expecting a multipart message
                 # part0 = service, part1 = request
-                message_parts = client_socket.recv_multipart()
-                (service, request) = message_parts
-                conn = None
+                (service, request) = client_socket.recv_multipart()
+                # (service, request) = message_parts
+                connection = None
                 for i in LRU:
                     if service in i["services"]:
                         connection = i["connection"]
@@ -156,8 +172,8 @@ class Dispatcher():
                         break
                 # TODO: Here would be where to plug in something
                 # if conn == None so that new listeners can be checked for
-                dispatcher_socket.send_multipart([connection, request]) 
-
+                dispatcher_socket.send_multipart([connection, 
+                    "%s %s" % (service, request)])
 
 class Router():
     """ stub of how I think it will work, stopping this and going
@@ -167,36 +183,28 @@ class Router():
     def __init__(self, context, 
             dispatcher_socket_uri,
             router_response_socket_uri,
-            port,
             my_id=str(uuid.uuid4())):
 
         self.context = context
         self.my_id = my_id
-        self.context = context
 
         self.dispatcher_socket = context.socket(zmq.PULL)
         self.dispatcher_socket.setsockopt(zmq.IDENTITY, "%s-router" % self.my_id)
         self.dispatcher_socket.connect(dispatcher_socket_uri)
 
-        self.response_socket = context.socket(zmq.ROUTER)
+        self.response_socket = context.socket(zmq.XREP)
         self.dispatcher_socket.setsockopt(zmq.IDENTITY, 
             "%s-router-response" % self.my_id)
 
         poller = zmq.Poller()
-        poller.register(dispatcher_socket, zmq.POLLIN)
+        poller.register(self.dispatcher_socket, zmq.POLLIN)
 
         while True:
             sock = dict(poller.poll())
 
             if sock.get(dispatcher_socket) == zmq.POLLIN:
-                multi_message = work_receiver.recv_multipart()
+                (connection, request) = work_receiver.recv_multipart()
+                self.context.socket(zmq.REQ).connect(connection).send(request)
 
-
-
-
-            
-    
-
-
-
-
+if __name__ == "__main__":
+    Dispatcher()
