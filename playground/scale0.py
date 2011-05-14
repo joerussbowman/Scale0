@@ -128,6 +128,7 @@ class Dispatcher():
         self.router_response_socket.bind(self.router_response_uri)
 
         poller = zmq.Poller()
+        poller.register(self.worker_socket, zmq.POLLIN)
         poller.register(self.client_socket, zmq.POLLIN)
 
         # get the routers started before we start the loop
@@ -143,37 +144,42 @@ class Dispatcher():
         print "Routers started, starting Dispatcher loop"
 
         while True:
+            print "In main Dispatcher loop"
             sock = dict(poller.poll())
+            print 'poll' 
 
-            if sock.get(worker_socket) == zmq.POLLIN:
+#            if sock.get(self.worker_socket) == zmq.POLLIN:
+#                print "Worker connection"
                 # from the worker we are expecting a multipart message,
                 # part0 = protocol command, part1 = request
-                message_parts = worker_socket.recv_multipart()
-                (command, request) = message_parts
-                if command.upper() == "PING":
-                    # PING is "uri services time"
-                    # services are comma delimited
-                    (uri, services, time) = request.split(" ", 3)
-                    # TODO: validate time here
-                    self.LRU.append({"connection": uri, 
-                        "services": services.split(",")})
-                    print "Worker %s PING" % uri
+#                message_parts = worker_socket.recv_multipart()
+#                (command, request) = message_parts
+#                if command.upper() == "PING":
+#                    # PING is "uri services time"
+#                    # services are comma delimited
+#                    (uri, services, time) = request.split(" ", 3)
+#                    # TODO: validate time here
+#                    self.LRU.append({"connection": uri, 
+#                        "services": services.split(",")})
+#                    print "Worker %s PING" % uri
+#
+#            if sock.get(self.client_socket) == zmq.POLLIN:
+#                # from the client we are expecting a multipart message
+#                # part0 = service, part1 = request
+#                (service, request) = client_socket.recv_multipart()
+#                # (service, request) = message_parts
+#                connection = None
+#                for i in LRU:
+#                    if service in i["services"]:
+#                        connection = i["connection"]
+#                        LRU.remove(i)
+#                        break
+#                # TODO: Here would be where to plug in something
+#                # if conn == None so that new listeners can be checked for
+#                dispatcher_socket.send_multipart([connection, 
+#                    "%s %s" % (service, request)])
 
-            if sock.get(client_socket) == zmq.POLLIN:
-                # from the client we are expecting a multipart message
-                # part0 = service, part1 = request
-                (service, request) = client_socket.recv_multipart()
-                # (service, request) = message_parts
-                connection = None
-                for i in LRU:
-                    if service in i["services"]:
-                        connection = i["connection"]
-                        LRU.remove(i)
-                        break
-                # TODO: Here would be where to plug in something
-                # if conn == None so that new listeners can be checked for
-                dispatcher_socket.send_multipart([connection, 
-                    "%s %s" % (service, request)])
+            print 'end loop cycle'
 
 class Router():
     """ stub of how I think it will work, stopping this and going

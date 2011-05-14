@@ -45,9 +45,3 @@ class Worker():
 
 if __name__ == "__main__":
     Worker("tcp://127.0.0.1:8081")
-        
-                
-
-
-
-
