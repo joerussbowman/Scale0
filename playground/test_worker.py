@@ -28,24 +28,37 @@ class Worker():
         poller.register(self.broker_socket, zmq.POLLIN)
         poller.register(self.listener_socket, zmq.POLLIN)
 
-        self.connected = False
+        """ self.connection_state can be 1 of 3 ints
+        0: not connected (not in LRU queue on broker)
+        1: connection pending (PING sent)
+        2: connected (PONG recieved, in LRU queue)
+        """
+        self.connection_state = 0 
 
         while True:
-            if not self.connected:
-                print 'connecting'
+            if self.connection_state < 1:
                 self.connect()
             sock = dict(poller.poll())
 
             if sock.get(self.broker_socket) == zmq.POLLIN:
+                print "Recieved message from broker"
+                (broker_id, command, request) = self.broker_socket.recv_multipart()
+                if command == "PONG":
+                    self.connection_state = 2
+                    print 'Got PONG, connected'
+
+            if sock.get(self.listener_socket) == zmq.POLLIN:
+                print "Recieved message from broker"
                 self.connect() # always connect first
-                (service, request) = work_receiver.recv_multipart()
+                (service, request) = self.listener_socket.recv_multipart()
                 print "Request service: %s, Request: %s" % (service, request)
                 
     def connect(self):
-        if not self.connected:
+        if self.connection_state < 1:
+            print 'connecting to broker'
             self.broker_socket.send_multipart(["PING", 
                 "%s test %s" % (self.listen_on, calendar.timegm(time.gmtime()))])
-            self.connected = True
+            self.connection_state = 1
 
 if __name__ == "__main__":
     Worker("tcp://127.0.0.1:8081")

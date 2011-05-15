@@ -17,6 +17,8 @@
 # under the License.
 
 import sys
+import calendar
+import time
 import zmq
 import uuid
 import tnetstrings
@@ -81,10 +83,11 @@ class Dispatcher():
                 if command.upper() == "PING":
                     # PING is "uri services time"
                     # services are comma delimited
-                    (uri, services, time) = request.split(" ", 3)
+                    (uri, services, worker_time) = request.split(" ", 3)
                     # TODO: validate time here
                     self.LRU.append({"connection": uri, 
                         "services": services.split(",")})
+                    self.worker_socket.send_multipart(["PONG", "%s" % calendar.timegm(time.gmtime())])
                     print "Worker %s PING" % uri
 
 if __name__ == "__main__":
