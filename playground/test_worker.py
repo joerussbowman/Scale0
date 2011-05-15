@@ -42,7 +42,7 @@ class Worker():
 
             if sock.get(self.broker_socket) == zmq.POLLIN:
                 print "Recieved message from broker"
-                (broker_id, command, request) = self.broker_socket.recv_multipart()
+                (command, request) = self.broker_socket.recv_multipart()
                 if command == "PONG":
                     self.connection_state = 2
                     print 'Got PONG, connected'

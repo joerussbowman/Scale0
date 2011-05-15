@@ -87,7 +87,7 @@ class Dispatcher():
                     # TODO: validate time here
                     self.LRU.append({"connection": uri, 
                         "services": services.split(",")})
-                    self.worker_socket.send_multipart(["PONG", "%s" % calendar.timegm(time.gmtime())])
+                    self.worker_socket.send_multipart([worker_id, "PONG", "%s" % calendar.timegm(time.gmtime())])
                     print "Worker %s PING" % uri
 
 if __name__ == "__main__":
