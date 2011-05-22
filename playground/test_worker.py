@@ -53,6 +53,8 @@ class Worker():
         if command == "OK":
             self.connect_state = 2
             print 'In LRU Queue'
+        if command == "PING":
+            self.broker_socket.send_multipart(["PONG", request])
         if command == "HEARTBEAT":
             if request == self.heartbeat_stamp:
                 print 'Got valid heartbeat %s' % request

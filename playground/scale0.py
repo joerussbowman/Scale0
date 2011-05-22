@@ -44,23 +44,27 @@ class Dispatcher():
             dispatcher_socket_base="ipc:///var/tmp/",
             router_response_socket_base="ipc:///var/tmp/",
             my_id=str(uuid.uuid4()),
-            routers=2):
+            routers=2, heartbeat=1, liveness=3):
 
         self.my_id = my_id
+        self.heartbeart_interval = heartbeat * 1000
+        self.heartbeat_liveness = liveness
 
         """ LRU Queue would look something like
-        [
-        {"connection": "tcp://127.0.0.1:55555", "services": ["web"]}
-        {"connection": "tcp://127.0.0.1:55556", "services": ["web"]}
-        {"connection": "tcp://127.0.0.1:44444", "services": ["news", "mail"]}
-        ]
+        {
+            "worker1": { "connection": "tcp://127.0.0.1:55555", "services": ["web"], "last_pong": int(time.time())}
+            "worker2": { "connection": "tcp://127.0.0.1:55555", "services": ["web"], "last_pong": int(time.time())}
+            "worker3": { "connection": "tcp://127.0.0.1:55555", "services": ["news", "mail"], "last_pong": int(time.time())}
+        }
         Eventually I'll move it to an object with getter and setters which
         can use something like gaeutilities event to notify the main
         application when a worker is added. That way requests don't
         get dropped. 
+
+        *id is usually a uuid, but really as long as they are unique Scale0 should not care.
         """
 
-        self.LRU = []
+        self.LRU = {} 
 
         self.context = zmq.Context()
 
@@ -71,6 +75,7 @@ class Dispatcher():
         self.loop = ioloop.IOLoop.instance()
 
         self.loop.add_handler(self.worker_socket, self.worker_handler, zmq.POLLIN)
+        ioloop.PeriodicCallback(self.send_pings, 1000, self.loop).start()
 
         self.loop.start()
 
@@ -90,8 +95,20 @@ class Dispatcher():
         """
 
         message = sock.recv_multipart()
-        #print message
         getattr(self, message[1].lower())(sock, message)
+
+    def send_pings(self):
+        ping_time = str(time.time())
+        for worker in self.LRU:
+            self.worker_socket.send_multipart([worker, "PING", ping_time])
+
+    def pong(self, sock, message):
+        """ pong is a reply to a ping for a worker in the LRU queue. """
+        (worker_id, command, request) = message
+        self.LRU[worker_id]["last_pong"] = float(request)
+        print "received pong for %s, updated queue" % worker_id
+        print str(self.LRU)
+
 
     def heartbeat(self, sock, message):
         """ For heartbeat we just shoot the request right back at the sender.
@@ -105,8 +122,9 @@ class Dispatcher():
 
         (worker_id, command, request) = message
         (uri, services) = request.split(" ", 2)
-        self.LRU.append({"connection": uri,
-            "services": services.split(",")})
+        self.LRU[worker_id] = {"connection": uri,
+            "services": services.split(","),
+            "last_pong": time.time()}
         sock.send_multipart([worker_id, "OK", ""])
         print "Worker %s READY" % uri
 
