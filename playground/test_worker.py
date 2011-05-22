@@ -25,11 +25,13 @@ class Worker():
         self.listener_socket.setsockopt(zmq.IDENTITY, "listener-%s" % self.my_id)
         self.listener_socket.bind(self.listen_on)
 
+        self.heartbeat_stamp = None
+
         self.loop = ioloop.IOLoop.instance()
 
         """ self.connection_state can be 1 of 3 ints
         0: not connected (not in LRU queue on broker)
-        1: connection pending (PING sent)
+        1: connection pending (READY sent)
         2: connected (OK recieved, in LRU queue)
         """
         self.connection_state = 0 
@@ -38,14 +40,24 @@ class Worker():
         self.loop.add_handler(self.listener_socket, self.listener_handler, zmq.POLLIN)
 
         ioloop.DelayedCallback(self.connect, 1000, self.loop).start()
+        ioloop.PeriodicCallback(self.send_heartbeat, 1000, self.loop).start()
 
         self.loop.start()
+
+    def send_heartbeat(self):
+        self.heartbeat_stamp = str(time.time())
+        self.broker_socket.send_multipart(["HEARTBEAT", self.heartbeat_stamp])
 
     def broker_handler(self, sock, events):
         (command, request) = sock.recv_multipart()
         if command == "OK":
             self.connect_state = 2
             print 'In LRU Queue'
+        if command == "HEARTBEAT":
+            if request == self.heartbeat_stamp:
+                print 'Got valid heartbeat %s' % request
+            else:
+                print "Heartbeat timestamp mismatch %s" % request
 
     def listener_handler(self, sock, events):
         (command, request) = sock.recv_multipart()

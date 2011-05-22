@@ -1,45 +1,45 @@
-Note: This project is going on hold for a while. Explanatory blog post here :
-http://joerussbowman.tumblr.com/post/4930274872/better-gas-mileage-car-putting-scale0-on-hold
+Scale0 - A dynamic service oriented smart load balancer.
 
-Update: I've decided base on reading that Erlang might make the most sense for this application.
-As I don't currently know Erlang, I'm going to read up on it while on vacation and work on this
-when I get back.
+What does that mean?
 
-Scale0 is a project to create a protocol and language agnostic
-infrastructure framework for scaling, using zeromq. Right now the
-plan is to implement a broker based system similar to the first
-large example found in the zeromq guide at http://zguide.zeromq.org/page:all
+Dynamic - Scale0 is configured by the backend workers that connect to it.
+There are no virtual servers, pool members or other configuration necessary.
 
-Front ends and back ends will be required to act as zeromq REQ connectors
-using documented apis for working with the brokers. The expectation is
-that front ends will accept connections using standard protocols and pass
-data back to back end pools. Minimal parsing should be done by the front
-ends.
+Service Oriented - Scale0 routes frontend request to backends by the services
+the backends announce they support.
 
-To assist with this an internal protocol used primarily for task routing
-will be included, using the multipart message features provided by zeromq.
+Smart Load Balancer - Scale0 uses a least recently used queue methodology to 
+route requests.
 
-The over all system will be written initially in Python, specifically because
-of the authors familiarity with the language. Once everything is in place
-this language choice me be re-examined in order to provide better performance
-if necessary.
+Huh? I still don't get it.
 
-Key requirements are:
- - Brokers, front ends and back ends can be added without requiring a restart of any
- Scale0 broker.
+Say you have a dynamic website and you want to have multiple backend servers
+processing requests received by a frontend webserver. A typical scenario might
+be several Tornado or node.js servers being proxied by an Nginx server.
 
-- Active monitoring of all back ends and brokers will be built into the environment
- in order to avoid task loss.
+A traffic spike happens, you need to get more backends up to handle the load.
+You hopefully have your Nginx servers load balanced so you can reconfigure them
+to support more backends. Your architecture might look like
 
-- Task processing requests can be routed to multiple back ends with the first response
- being authoritative when required. This will provide maximium durability for tasks that
- take advantage of this feature, limiting the chance of a stalled task processing job on
- one back end causing an issue with the response generation.
+                                        ------------------
+                                        | Backend Server |
+                                        ------------------
 
- The first purpose of this system will be to provide an https caching reverse proxy
- server with the option to use the file system or MongoDB for the cache storage.
- However, Scale0 will not have any http or other protocol requirements, allowing
- it to be used to scale other similar processing tasks. Some examples could include
- smtp, syslog or even routing database requests to multiple database instances.
+                      ----------------  ------------------
+                      | Nginx Server |  | Backend Server |
+                      ----------------  ------------------
 
- This project is still in the infancy of the research and design phase.
+-----------------                       -----------------
+| Load Balancer |                       | Backend Server |
+-----------------                       ------------------
+
+                      ----------------  ------------------
+                      | Nginx Server |  | Backend Server |
+                      ---------------   ------------------
+                                        ------------------
+                                        | Backend Server |
+                                        ------------------
+
+
+
+Adding more servers will require reconfiguring the nginx servers.

@@ -75,15 +75,40 @@ class Dispatcher():
         self.loop.start()
 
     def worker_handler(self, sock, events):
-        (worker_id, command, request) = sock.recv_multipart()
-        if command.upper() == "HEARTBEAT":
-            sock.send_multipart([worker_id, "HEARTBEATREPLY", request])
-        if command.upper() == "READY":
-            (uri, services) = request.split(" ", 2)
-            self.LRU.append({"connection": uri,
-                "services": services.split(",")})
-            sock.send_multipart([worker_id, "OK", ""])
-            print "Worker %s READY" % uri
+        """ worker_handler handles messages from worker sockets. Messages
+        are 3+ part ZeroMQ multipart messages. (worker_id, command, request).
+
+        worker_id is supplied as part of the ROUTER socket requirements and is
+        used to send replies back.
+
+        command is mapped to functions. This allows an undefined method error
+        to be thrown if the command isn't an acceptable method. Also just
+        easier to maintain the code if each command is it's own method.
+
+        request is the rest of the message, can be multiple parts and Scale0
+        will generally ignore it except to pass it on.
+        """
+
+        message = sock.recv_multipart()
+        #print message
+        getattr(self, message[1].lower())(sock, message)
+
+    def heartbeat(self, sock, message):
+        """ For heartbeat we just shoot the request right back at the sender.
+        Don't even bother to parse anything to save time.
+        """
+        sock.send_multipart(sock.recv_multipart())
+
+    def ready(self, sock, message):
+        """ ready is the worker informing Scale0 it can accept more jobs.
+        """
+
+        (worker_id, command, request) = message
+        (uri, services) = request.split(" ", 2)
+        self.LRU.append({"connection": uri,
+            "services": services.split(",")})
+        sock.send_multipart([worker_id, "OK", ""])
+        print "Worker %s READY" % uri
 
 if __name__ == "__main__":
     Dispatcher()
