@@ -23,6 +23,7 @@ import zmq
 import uuid
 import tnetstrings
 from zmq import devices
+from zmq.eventloop import ioloop
 
 class Dispatcher():
     """ The Dispatcher will accept requests on the client_socket,
@@ -67,32 +68,22 @@ class Dispatcher():
         self.worker_socket.setsockopt(zmq.IDENTITY, "%s-worker" % self.my_id)
         self.worker_socket.bind(worker_socket_uri)
 
-        poller = zmq.Poller()
-        poller.register(self.worker_socket, zmq.POLLIN)
+        self.loop = ioloop.IOLoop.instance()
 
-        while True:
-            sock = dict(poller.poll())
-            print 'poll'
+        self.loop.add_handler(self.worker_socket, self.worker_handler, zmq.POLLIN)
 
-            if sock.get(self.worker_socket) == zmq.POLLIN:
-                print "Worker connection"
-                # from the worker we are expecting a multipart message,
-                # part0 = protocol command, part1 = request
-                message_parts = self.worker_socket.recv_multipart()
-                (worker_id, command, request) = message_parts
-                # HEARTBEAT sent from Worker, reply with request.
-                # This allows the worker to define how it keeps track.
-                if command.upper() == "HEARTBEAT":
-                    self.worker_socket.send_multipart([worker_id, "HEARTBEATREPLY", request])
-                if command.upper() == "READY":
-                    # PING is "uri services time"
-                    # services are comma delimited
-                    (uri, services, worker_time) = request.split(" ", 3)
-                    # TODO: validate time here
-                    self.LRU.append({"connection": uri, 
-                        "services": services.split(",")})
-                    self.worker_socket.send_multipart([worker_id, "OK", "%s" % calendar.timegm(time.gmtime())])
-                    print "Worker %s READY" % uri
+        self.loop.start()
+
+    def worker_handler(self, sock, events):
+        (worker_id, command, request) = sock.recv_multipart()
+        if command.upper() == "HEARTBEAT":
+            sock.send_multipart([worker_id, "HEARTBEATREPLY", request])
+        if command.upper() == "READY":
+            (uri, services) = request.split(" ", 2)
+            self.LRU.append({"connection": uri,
+                "services": services.split(",")})
+            sock.send_multipart([worker_id, "OK", ""])
+            print "Worker %s READY" % uri
 
 if __name__ == "__main__":
     Dispatcher()

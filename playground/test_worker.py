@@ -59,7 +59,7 @@ class Worker():
         if self.connection_state < 1:
             print 'connecting to broker'
             self.broker_socket.send_multipart(["READY", 
-                "%s test %s" % (self.listen_on, calendar.timegm(time.gmtime()))])
+                "%s test" % (self.listen_on)])
             self.connection_state = 1
 
 if __name__ == "__main__":
