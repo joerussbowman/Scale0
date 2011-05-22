@@ -46,6 +46,7 @@ class Worker():
 
     def send_heartbeat(self):
         self.heartbeat_stamp = str(time.time())
+        print 'sending heartbeat %s' % self.heartbeat_stamp
         self.broker_socket.send_multipart(["HEARTBEAT", self.heartbeat_stamp])
 
     def broker_handler(self, sock, events):
@@ -54,6 +55,7 @@ class Worker():
             self.connect_state = 2
             print 'In LRU Queue'
         if command == "PING":
+            print 'got ping %s' % request
             self.broker_socket.send_multipart(["PONG", request])
         if command == "HEARTBEAT":
             if request == self.heartbeat_stamp:

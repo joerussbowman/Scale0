@@ -50,7 +50,7 @@ class Dispatcher():
         self.heartbeart_interval = heartbeat * 1000
         self.heartbeat_liveness = liveness
 
-        """ LRU Queue would look something like
+        """ Workers info would look something like
         {
             "worker1": { "connection": "tcp://127.0.0.1:55555", "services": ["web"], "last_pong": int(time.time())}
             "worker2": { "connection": "tcp://127.0.0.1:55555", "services": ["web"], "last_pong": int(time.time())}
@@ -64,7 +64,9 @@ class Dispatcher():
         *id is usually a uuid, but really as long as they are unique Scale0 should not care.
         """
 
-        self.LRU = {} 
+        self.workers = {} 
+        self.LRU = []
+        self.pings = []
 
         self.context = zmq.Context()
 
@@ -101,13 +103,14 @@ class Dispatcher():
         ping_time = str(time.time())
         for worker in self.LRU:
             self.worker_socket.send_multipart([worker, "PING", ping_time])
+            self.pings.append(ping_time)
 
     def pong(self, sock, message):
         """ pong is a reply to a ping for a worker in the LRU queue. """
         (worker_id, command, request) = message
-        self.LRU[worker_id]["last_pong"] = float(request)
-        print "received pong for %s, updated queue" % worker_id
-        print str(self.LRU)
+        self.workers[worker_id]["last_pong"] = float(request)
+        self.pings.remove(request)
+        print self.pings
 
 
     def heartbeat(self, sock, message):
@@ -122,9 +125,10 @@ class Dispatcher():
 
         (worker_id, command, request) = message
         (uri, services) = request.split(" ", 2)
-        self.LRU[worker_id] = {"connection": uri,
+        self.workers[worker_id] = {"connection": uri,
             "services": services.split(","),
             "last_pong": time.time()}
+        self.LRU.append(worker_id)
         sock.send_multipart([worker_id, "OK", ""])
         print "Worker %s READY" % uri
 
