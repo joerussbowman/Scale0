@@ -80,15 +80,19 @@ class Dispatcher():
                 # part0 = protocol command, part1 = request
                 message_parts = self.worker_socket.recv_multipart()
                 (worker_id, command, request) = message_parts
-                if command.upper() == "PING":
+                # HEARTBEAT sent from Worker, reply with request.
+                # This allows the worker to define how it keeps track.
+                if command.upper() == "HEARTBEAT":
+                    self.worker_socket.send_multipart([worker_id, "HEARTBEATREPLY", request])
+                if command.upper() == "READY":
                     # PING is "uri services time"
                     # services are comma delimited
                     (uri, services, worker_time) = request.split(" ", 3)
                     # TODO: validate time here
                     self.LRU.append({"connection": uri, 
                         "services": services.split(",")})
-                    self.worker_socket.send_multipart([worker_id, "PONG", "%s" % calendar.timegm(time.gmtime())])
-                    print "Worker %s PING" % uri
+                    self.worker_socket.send_multipart([worker_id, "OK", "%s" % calendar.timegm(time.gmtime())])
+                    print "Worker %s READY" % uri
 
 if __name__ == "__main__":
     Dispatcher()

@@ -4,6 +4,7 @@ import zmq
 import uuid
 import tnetstrings
 from zmq import devices
+from zmq.eventloop import ioloop
 
 class Worker():
     def __init__(self, connect_to, listen_on="tcp://127.0.0.1:9080"):
@@ -24,39 +25,40 @@ class Worker():
         self.listener_socket.setsockopt(zmq.IDENTITY, "listener-%s" % self.my_id)
         self.listener_socket.bind(self.listen_on)
 
-        poller = zmq.Poller()
-        poller.register(self.broker_socket, zmq.POLLIN)
-        poller.register(self.listener_socket, zmq.POLLIN)
+        self.loop = ioloop.IOLoop.instance()
 
         """ self.connection_state can be 1 of 3 ints
         0: not connected (not in LRU queue on broker)
         1: connection pending (PING sent)
-        2: connected (PONG recieved, in LRU queue)
+        2: connected (OK recieved, in LRU queue)
         """
         self.connection_state = 0 
 
-        while True:
-            if self.connection_state < 1:
-                self.connect()
-            sock = dict(poller.poll())
+        self.loop.add_handler(self.broker_socket, self.broker_handler, zmq.POLLIN)
+        self.loop.add_handler(self.listener_socket, self.listener_handler, zmq.POLLIN)
 
-            if sock.get(self.broker_socket) == zmq.POLLIN:
-                print "Recieved message from broker"
-                (command, request) = self.broker_socket.recv_multipart()
-                if command == "PONG":
-                    self.connection_state = 2
-                    print 'Got PONG, connected'
+        ioloop.DelayedCallback(self.connect, 1000, self.loop).start()
 
-            if sock.get(self.listener_socket) == zmq.POLLIN:
-                print "Recieved message from broker"
-                self.connect() # always connect first
-                (service, request) = self.listener_socket.recv_multipart()
-                print "Request service: %s, Request: %s" % (service, request)
+        self.loop.start()
+
+    def broker_handler(self, sock, events):
+        (command, request) = sock.recv_multipart()
+        if command == "OK":
+            self.connect_state = 2
+            print 'In LRU Queue'
+
+    def listener_handler(self, sock, events):
+        (command, request) = sock.recv_multipart()
+        print "Recieved message from broker"
+        self.connect() # always reconnect
+        (service, request) = sock.recv_multipart()
+        print "Request service %s, Request: %s" % (service, request)
                 
     def connect(self):
+        print 'Running connect test'
         if self.connection_state < 1:
             print 'connecting to broker'
-            self.broker_socket.send_multipart(["PING", 
+            self.broker_socket.send_multipart(["READY", 
                 "%s test %s" % (self.listen_on, calendar.timegm(time.gmtime()))])
             self.connection_state = 1
 
