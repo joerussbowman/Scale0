@@ -22,7 +22,7 @@ import time
 import zmq
 import uuid
 import tnetstrings
-from zmq.eventloop import ioloop
+from zmq.eventloop import ioloop, zmqstream
 
 class Dispatcher():
     def __init__(self, 
@@ -53,20 +53,22 @@ class Dispatcher():
         self.LRU = []
         self.pings = []
 
-        self.context = zmq.Context()
+        self.context = zmq.Context.instance()
+        self.loop = ioloop.IOLoop.instance()
 
         self.worker_xrep_socket = self.context.socket(zmq.XREP)
         self.worker_xrep_socket.setsockopt(zmq.IDENTITY, "%s-worker" % self.my_id)
         self.worker_xrep_socket.bind(worker_xrep_socket_uri)
+        
+        self.worker_xrep_stream = zmqstream.ZMQStream(self.worker_xrep_socket, self.loop)
+        self.worker_xrep_stream.on_recv(self.worker_handler)
 
-        self.loop = ioloop.IOLoop.instance()
-
-        self.loop.add_handler(self.worker_xrep_socket, self.worker_handler, zmq.POLLIN)
+        # self.loop.add_handler(self.worker_xrep_socket, self.worker_handler, zmq.POLLIN)
         ioloop.PeriodicCallback(self.send_pings, self.heartbeat_interval, self.loop).start()
 
         self.loop.start()
 
-    def worker_handler(self, sock, events):
+    def worker_handler(self, message):
         """ worker_handler handles messages from worker sockets. Messages
         are 3+ part ZeroMQ multipart messages. (worker_id, command, request).
 
@@ -80,8 +82,9 @@ class Dispatcher():
         request is the rest of the message, can be multiple parts and Scale0
         will generally ignore it except to pass it on.
         """
+        sock = self.worker_xrep_stream
 
-        message = sock.recv_multipart()
+        # message = sock.recv_multipart()
         getattr(self, message[1].lower())(sock, message)
 
     def send_pings(self):
@@ -111,7 +114,7 @@ class Dispatcher():
         """ For heartbeat we just shoot the request right back at the sender.
         Don't even bother to parse anything to save time.
         """
-        sock.send_multipart(sock.recv_multipart())
+        sock.send_multipart(message)
 
     def ready(self, sock, message):
         """ ready is the worker informing Scale0 it can accept more jobs.

@@ -3,7 +3,7 @@ import time
 import zmq
 import uuid
 import tnetstrings
-from zmq.eventloop import ioloop
+from zmq.eventloop import ioloop, zmqstream
 
 class Worker():
     def __init__(self, connect_to, listen_on="tcp://127.0.0.1:9080"):
@@ -13,21 +13,23 @@ class Worker():
         Router in the Broker will make requests to. 
         """
         self.my_id = str(uuid.uuid4())
-        self.context = zmq.Context()
+        self.context = zmq.Context.instance()
+        self.loop = ioloop.IOLoop.instance()
         self.listen_on = listen_on
 
         self.broker_socket = self.context.socket(zmq.XREQ)
         self.broker_socket.setsockopt(zmq.IDENTITY, "broker-%s" % self.my_id)
         self.broker_socket.connect(connect_to)
+        self.broker_stream = zmqstream.ZMQStream(self.broker_socket, self.loop)
 
         self.listener_socket = self.context.socket(zmq.XREP)
         self.listener_socket.setsockopt(zmq.IDENTITY, "listener-%s" % self.my_id)
         self.listener_socket.bind(self.listen_on)
+        self.listener_stream = zmqstream.ZMQStream(self.listener_socket, self.loop)
 
         self.heartbeat_stamp = None
         self.heartbeats = []
 
-        self.loop = ioloop.IOLoop.instance()
 
         """ self.connection_state can be 1 of 3 ints
         0: not connected (not in LRU queue on broker)
@@ -35,9 +37,11 @@ class Worker():
         2: connected (OK recieved, in LRU queue)
         """
         self.connection_state = 0 
-
-        self.loop.add_handler(self.broker_socket, self.broker_handler, zmq.POLLIN)
-        self.loop.add_handler(self.listener_socket, self.listener_handler, zmq.POLLIN)
+        
+        self.broker_stream.on_recv(self.broker_handler)
+        self.listener_stream.on_recv(self.listener_handler)
+        # self.loop.add_handler(self.broker_socket, self.broker_handler, zmq.POLLIN)
+        # self.loop.add_handler(self.listener_socket, self.listener_handler, zmq.POLLIN)
 
         ioloop.DelayedCallback(self.connect, 1000, self.loop).start()
         ioloop.PeriodicCallback(self.send_heartbeat, 1000, self.loop).start()
@@ -50,8 +54,8 @@ class Worker():
         self.heartbeats.append(self.heartbeat_stamp)
         self.broker_socket.send_multipart(["HEARTBEAT", self.heartbeat_stamp])
 
-    def broker_handler(self, sock, events):
-        (command, request) = sock.recv_multipart()
+    def broker_handler(self, msg):
+        (command, request) = msg
         if command == "OK":
             self.connect_state = 2
             print 'In LRU Queue'
@@ -63,8 +67,8 @@ class Worker():
             self.heartbeats.remove(request)
             print self.heartbeats
 
-    def listener_handler(self, sock, events):
-        (sock_id, command, request) = sock.recv_multipart()
+    def listener_handler(self, msg):
+        (sock_id, command, request) = msg
         if command == "PING":
             print 'got ping %s' % request
             self.broker_socket.send_multipart(["PONG", request])
