@@ -3,7 +3,6 @@ import time
 import zmq
 import uuid
 import tnetstrings
-from zmq import devices
 from zmq.eventloop import ioloop
 
 class Worker():
@@ -26,6 +25,7 @@ class Worker():
         self.listener_socket.bind(self.listen_on)
 
         self.heartbeat_stamp = None
+        self.heartbeats = []
 
         self.loop = ioloop.IOLoop.instance()
 
@@ -47,6 +47,7 @@ class Worker():
     def send_heartbeat(self):
         self.heartbeat_stamp = str(time.time())
         print 'sending heartbeat %s' % self.heartbeat_stamp
+        self.heartbeats.append(self.heartbeat_stamp)
         self.broker_socket.send_multipart(["HEARTBEAT", self.heartbeat_stamp])
 
     def broker_handler(self, sock, events):
@@ -54,21 +55,24 @@ class Worker():
         if command == "OK":
             self.connect_state = 2
             print 'In LRU Queue'
-        if command == "PING":
-            print 'got ping %s' % request
-            self.broker_socket.send_multipart(["PONG", request])
         if command == "HEARTBEAT":
             if request == self.heartbeat_stamp:
                 print 'Got valid heartbeat %s' % request
             else:
                 print "Heartbeat timestamp mismatch %s" % request
+            self.heartbeats.remove(request)
+            print self.heartbeats
 
     def listener_handler(self, sock, events):
-        (command, request) = sock.recv_multipart()
-        print "Recieved message from broker"
-        self.connect() # always reconnect
-        (service, request) = sock.recv_multipart()
-        print "Request service %s, Request: %s" % (service, request)
+        (sock_id, command, request) = sock.recv_multipart()
+        if command == "PING":
+            print 'got ping %s' % request
+            self.broker_socket.send_multipart(["PONG", request])
+        else:
+            print "Recieved message from broker"
+            self.connect() # always reconnect
+            (service, request) = sock.recv_multipart()
+            print "Request service %s, Request: %s" % (service, request)
                 
     def connect(self):
         print 'Running connect test'
