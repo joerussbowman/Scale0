@@ -42,4 +42,49 @@ to support more backends. Your architecture might look like
 
 
 
-Adding more servers will require reconfiguring the nginx servers.
+Adding more servers will require reconfiguring the nginx servers. Generally you
+can do this by turning off one in the pool, adding the new members, bringing it
+back up and doing the same on the other. If you're running in active/active
+mode on your load balancer you're cutting your input capability in half while
+trying to scale up.
+
+Using Scale0, and something that supports ZeroMQ like Mongrel2 (or a module for
+Nginx would nice, hint hint) you could do something like this.
+
+                                                        ------------------
+                                                        | Backend Server |
+                                                        ------------------
+
+                    ------------                        ------------------
+                    | Mongrel2 |                        | Backend Server |
+                    ------------                        ------------------
+
+-----------------                       ----------      ------------------
+| Load Balancer |                       | Scale0 |      | Backend Server |
+-----------------                       ----------      ------------------
+
+                    ------------                        ------------------
+                    | Mongrel2 |                        | Backend Server |
+                    ------------                        ------------------
+
+                                                        ------------------
+                                                        | Backend Server |
+                                                        ------------------
+
+Here's where the magic starts. Say you need to scale up. Just turn on more
+backend servers and connect them to Scale0. That's it, you can increase your
+processing capacity, or decrease it, at will. Scale0 is the elasticity that
+allows you to scale your system real time for load.
+
+Scale0 is also service agnostic. At this time it's not being designed with
+streams in mind, but for protocols like http or smtp it should work great.
+It will require services to be built supporting ZeroMQ on the frontend to
+support it, Scale0 is the first piece towards a scalable architecture. 
+
+Note: Scale0 is in an early state of development. Some of the current ideas
+include using PUSH/PULL sockets for front end communication, allowing you to
+stand up more Scale0 servers. Then PUB/SUB for the backend, using ZMQ Identity
+to manage subscriptions. Internally Scale0 uses a Least Recently Used Queue
+methodology requiring backend servers to announce their readiness for accepting
+a request. More information will be in the docs once the project is finished
+being fleshed out.
