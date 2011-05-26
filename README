@@ -26,7 +26,7 @@ to support more backends. Your architecture might look like
                                         ------------------
 
                       ----------------  ------------------
-                      | Nginx Server |  | Backend Server |
+                      | Proxy Server |  | Backend Server |
                       ----------------  ------------------
 
 -----------------                       -----------------
@@ -34,7 +34,7 @@ to support more backends. Your architecture might look like
 -----------------                       ------------------
 
                       ----------------  ------------------
-                      | Nginx Server |  | Backend Server |
+                      | Proxy Server |  | Backend Server |
                       ---------------   ------------------
                                         ------------------
                                         | Backend Server |
@@ -42,11 +42,17 @@ to support more backends. Your architecture might look like
 
 
 
-Adding more servers will require reconfiguring the nginx servers. Generally you
+Adding more servers will require reconfiguring the proxy servers. Generally you
 can do this by turning off one in the pool, adding the new members, bringing it
 back up and doing the same on the other. If you're running in active/active
 mode on your load balancer you're cutting your input capability in half while
 trying to scale up.
+
+Alternatively you could of course stand up another proxy server with new backends
+and add it to the pool on the load balancer. Let's not pretend that the solution
+is impossible without Scale0, Scale0 just provides an alternative solution that
+allows you scale all the way at the backend, instead of messing around with the
+front door.
 
 Using Scale0, and something that supports ZeroMQ like Mongrel2 (or a module for
 Nginx would nice, hint hint) you could do something like this.
@@ -55,17 +61,17 @@ Nginx would nice, hint hint) you could do something like this.
                                                         | Backend Server |
                                                         ------------------
 
-                    ------------                        ------------------
-                    | Mongrel2 |                        | Backend Server |
-                    ------------                        ------------------
+                    ----------------                    ------------------
+                    | Proxy Server |                    | Backend Server |
+                    ----------------                    ------------------
 
 -----------------                       ----------      ------------------
 | Load Balancer |                       | Scale0 |      | Backend Server |
 -----------------                       ----------      ------------------
 
-                    ------------                        ------------------
-                    | Mongrel2 |                        | Backend Server |
-                    ------------                        ------------------
+                    ----------------                    ------------------
+                    | Proxy Server |                    | Backend Server |
+                    ----------------                    ------------------
 
                                                         ------------------
                                                         | Backend Server |
@@ -88,3 +94,10 @@ to manage subscriptions. Internally Scale0 uses a Least Recently Used Queue
 methodology requiring backend servers to announce their readiness for accepting
 a request. More information will be in the docs once the project is finished
 being fleshed out.
+
+Note2: Hey! Doesn't that make Scale0 a single point of failure in an environment
+built for avoiding that? Part of the plans for Scale0 include the ability to set
+up failover servers. Backend and proxy servers will need to know about the failover
+server, and the plan is to allow Scale0 to provide that information and also build
+in a protocol and management interface to allow you to fail over manually as well,
+say when you need to do OS upgrades on the Scale0 server.
