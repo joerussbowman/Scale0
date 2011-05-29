@@ -27,7 +27,8 @@ from zmq.eventloop import ioloop, zmqstream
 class Dispatcher():
     def __init__(self, 
             client_socket_uri="tcp://127.0.0.1:8080", 
-            worker_xrep_socket_uri="tcp://127.0.0.1:8081", 
+            worker_xrep_socket_uri="tcp://127.0.0.1:8081",
+            pub_socket_uri="tcp://127.0.0.1:8082",
             my_id=str(uuid.uuid4()),
             routers=2, heartbeat=1, liveness=3):
 
@@ -63,8 +64,16 @@ class Dispatcher():
         self.worker_xrep_stream = zmqstream.ZMQStream(self.worker_xrep_socket, self.loop)
         self.worker_xrep_stream.on_recv(self.worker_handler)
 
+
+        # Trying to move to PUB for getting messages to Workers
+        self.pub_socket = self.context.socket(zmq.PUB)
+        self.pub_socket.setsockopt(zmq.IDENTITY, "%s_broker_pub" % self.my_id)
+        self.pub_socket.bind(pub_socket_uri)
+        
+        self.pub_stream = zmqstream.ZMQStream(self.pub_socket, self.loop)
         # self.loop.add_handler(self.worker_xrep_socket, self.worker_handler, zmq.POLLIN)
         ioloop.PeriodicCallback(self.send_pings, self.heartbeat_interval, self.loop).start()
+        ioloop.PeriodicCallback(self.send_pub, self.heartbeat_interval, self.loop).start()
 
         self.loop.start()
 
@@ -101,6 +110,10 @@ class Dispatcher():
                 self.workers[worker]["socket"].send_multipart(["PING", ping_time])
                 self.pings.append("%s_%s" % (worker, ping_time))
             #ping_sock.close()
+
+    def send_pub(self):
+        """ Test method for validating pub/sub is working """
+        self.pub_socket.send_multipart(["PING", ""])
 
     def pong(self, sock, message):
         """ pong is a reply to a ping for a worker in the LRU queue. """

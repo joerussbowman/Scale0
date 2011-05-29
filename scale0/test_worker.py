@@ -27,6 +27,12 @@ class Worker():
         self.listener_socket.bind(self.listen_on)
         self.listener_stream = zmqstream.ZMQStream(self.listener_socket, self.loop)
 
+        self.sub_socket = self.context.socket(zmq.SUB)
+        self.sub_socket.setsockopt(zmq.IDENTITY, "worker_sub_%s" % self.my_id)
+        self.sub_socket.connect("tcp://127.0.0.1:8082")
+        self.sub_socket.setsockopt(zmq.SUBSCRIBE,"PING")
+        self.sub_stream = zmqstream.ZMQStream(self.sub_socket, self.loop)
+
         self.heartbeat_stamp = None
         self.heartbeats = []
 
@@ -40,6 +46,7 @@ class Worker():
         
         self.broker_stream.on_recv(self.broker_handler)
         self.listener_stream.on_recv(self.listener_handler)
+        self.sub_stream.on_recv(self.sub_handler)
         # self.loop.add_handler(self.broker_socket, self.broker_handler, zmq.POLLIN)
         # self.loop.add_handler(self.listener_socket, self.listener_handler, zmq.POLLIN)
 
@@ -77,6 +84,10 @@ class Worker():
             self.connect() # always reconnect
             (service, request) = sock.recv_multipart()
             print "Request service %s, Request: %s" % (service, request)
+
+    def sub_handler(self, msg):
+        """ Trying to move to pub/sub for getting messages to workers. """
+        print "SUB MSG %s" % msg
                 
     def connect(self):
         print 'Running connect test'
