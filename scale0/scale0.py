@@ -95,18 +95,19 @@ class Dispatcher():
         """
         if len(self.LRU) > 0:
             ping_time = str(time.time())
-            ping_sock = self.context.socket(zmq.XREQ)
+            #ping_sock = self.context.socket(zmq.XREQ)
             for worker in self.LRU:
-                ping_sock.connect(self.workers[worker]["connection"])
-                ping_sock.send_multipart(["PING", ping_time])
-                self.pings.append(ping_time)
-            ping_sock.close()
+                #ping_sock.connect(self.workers[worker]["connection"])
+                self.workers[worker]["socket"].send_multipart(["PING", ping_time])
+                self.pings.append("%s_%s" % (worker, ping_time))
+            #ping_sock.close()
 
     def pong(self, sock, message):
         """ pong is a reply to a ping for a worker in the LRU queue. """
         (worker_id, command, request) = message
+        print "got ping for %s" % worker_id
         self.workers[worker_id]["last_pong"] = float(request)
-        self.pings.remove(request)
+        self.pings.remove("%s_%s" %(worker_id, request))
         print self.pings
 
 
@@ -122,9 +123,12 @@ class Dispatcher():
 
         (worker_id, command, request) = message
         (uri, services) = request.split(" ", 2)
+        socket = self.context.socket(zmq.XREQ)
+        socket.connect(uri)
         self.workers[worker_id] = {"connection": uri,
             "services": services.split(","),
-            "last_pong": time.time()}
+            "last_pong": time.time(),
+            "socket": socket}
         self.LRU.append(worker_id)
         sock.send_multipart([worker_id, "OK", ""])
         print "Worker %s READY" % uri
