@@ -18,18 +18,15 @@ class Worker():
         self.listen_on = listen_on
 
         self.broker_socket = self.context.socket(zmq.XREQ)
-        self.broker_socket.setsockopt(zmq.IDENTITY, "broker-%s" % self.my_id)
+        self.broker_socket.setsockopt(zmq.IDENTITY, "%s" % self.my_id)
         self.broker_socket.connect(connect_to)
         self.broker_stream = zmqstream.ZMQStream(self.broker_socket, self.loop)
 
-        self.listener_socket = self.context.socket(zmq.XREP)
-        self.listener_socket.setsockopt(zmq.IDENTITY, "listener-%s" % self.my_id)
-        self.listener_socket.bind(self.listen_on)
-        self.listener_stream = zmqstream.ZMQStream(self.listener_socket, self.loop)
-
         self.sub_socket = self.context.socket(zmq.SUB)
-        self.sub_socket.setsockopt(zmq.IDENTITY, "worker_sub_%s" % self.my_id)
+        self.sub_socket.setsockopt(zmq.IDENTITY, "%s_worker_sub" % self.my_id)
         self.sub_socket.connect("tcp://127.0.0.1:8082")
+        self.sub_socket.setsockopt(zmq.SUBSCRIBE, self.my_id)
+        print "subscribed to %s" % self.my_id
         self.sub_socket.setsockopt(zmq.SUBSCRIBE,"PING")
         self.sub_stream = zmqstream.ZMQStream(self.sub_socket, self.loop)
 
@@ -45,10 +42,7 @@ class Worker():
         self.connection_state = 0 
         
         self.broker_stream.on_recv(self.broker_handler)
-        self.listener_stream.on_recv(self.listener_handler)
         self.sub_stream.on_recv(self.sub_handler)
-        # self.loop.add_handler(self.broker_socket, self.broker_handler, zmq.POLLIN)
-        # self.loop.add_handler(self.listener_socket, self.listener_handler, zmq.POLLIN)
 
         ioloop.DelayedCallback(self.connect, 1000, self.loop).start()
         ioloop.PeriodicCallback(self.send_heartbeat, 1000, self.loop).start()
@@ -56,16 +50,14 @@ class Worker():
         self.loop.start()
 
     def send_heartbeat(self):
-        self.heartbeat_stamp = str(time.time())
-        print 'sending heartbeat %s' % self.heartbeat_stamp
-        self.heartbeats.append(self.heartbeat_stamp)
-        self.broker_socket.send_multipart(["HEARTBEAT", self.heartbeat_stamp])
+        if self.connection_state == 2:
+            self.heartbeat_stamp = str(time.time())
+            print 'sending heartbeat %s' % self.heartbeat_stamp
+            self.heartbeats.append(self.heartbeat_stamp)
+            self.broker_socket.send_multipart(["HEARTBEAT", self.heartbeat_stamp])
 
     def broker_handler(self, msg):
         (command, request) = msg
-        if command == "OK":
-            self.connect_state = 2
-            print 'In LRU Queue'
         if command == "HEARTBEAT":
             if request == self.heartbeat_stamp:
                 print 'Got valid heartbeat %s' % request
@@ -74,27 +66,21 @@ class Worker():
             self.heartbeats.remove(request)
             print self.heartbeats
 
-    def listener_handler(self, msg):
-        (sock_id, command, request) = msg
-        if command == "PING":
-            print 'got ping %s' % request
-            self.broker_socket.send_multipart(["PONG", request])
-        else:
-            print "Recieved message from broker"
-            self.connect() # always reconnect
-            (service, request) = sock.recv_multipart()
-            print "Request service %s, Request: %s" % (service, request)
-
     def sub_handler(self, msg):
         """ Trying to move to pub/sub for getting messages to workers. """
-        print "SUB MSG %s" % msg
-                
+        (command, request) = msg
+        if command == "PING":
+            self.broker_socket.send_multipart(["PONG", request])
+        if command == "OK":
+            self.connect_state = 2
+            print 'In LRU Queue'
+
     def connect(self):
         print 'Running connect test'
         if self.connection_state < 1:
             print 'connecting to broker'
             self.broker_socket.send_multipart(["READY", 
-                "%s test" % (self.listen_on)])
+                 "test"])
             self.connection_state = 1
 
 if __name__ == "__main__":

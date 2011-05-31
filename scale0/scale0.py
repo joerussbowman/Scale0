@@ -38,9 +38,9 @@ class Dispatcher():
 
         """ Workers info would look something like
         {
-            "worker1": { "connection": "tcp://127.0.0.1:55555", "services": ["web"], "last_pong": int(time.time())}
-            "worker2": { "connection": "tcp://127.0.0.1:55555", "services": ["web"], "last_pong": int(time.time())}
-            "worker3": { "connection": "tcp://127.0.0.1:55555", "services": ["news", "mail"], "last_pong": int(time.time())}
+            "worker1": { "services": ["web"], "last_pong": int(time.time())}
+            "worker2": { "services": ["web"], "last_pong": int(time.time())}
+            "worker3": { "services": ["news", "mail"], "last_pong": int(time.time())}
         }
         Eventually I'll move it to an object with getter and setters which
         can use something like gaeutilities event to notify the main
@@ -52,7 +52,6 @@ class Dispatcher():
 
         self.workers = {} 
         self.LRU = []
-        self.pings = []
 
         self.context = zmq.Context.instance()
         self.loop = ioloop.IOLoop.instance()
@@ -64,16 +63,12 @@ class Dispatcher():
         self.worker_xrep_stream = zmqstream.ZMQStream(self.worker_xrep_socket, self.loop)
         self.worker_xrep_stream.on_recv(self.worker_handler)
 
-
-        # Trying to move to PUB for getting messages to Workers
         self.pub_socket = self.context.socket(zmq.PUB)
         self.pub_socket.setsockopt(zmq.IDENTITY, "%s_broker_pub" % self.my_id)
         self.pub_socket.bind(pub_socket_uri)
         
         self.pub_stream = zmqstream.ZMQStream(self.pub_socket, self.loop)
-        # self.loop.add_handler(self.worker_xrep_socket, self.worker_handler, zmq.POLLIN)
         ioloop.PeriodicCallback(self.send_pings, self.heartbeat_interval, self.loop).start()
-        ioloop.PeriodicCallback(self.send_pub, self.heartbeat_interval, self.loop).start()
 
         self.loop.start()
 
@@ -93,7 +88,6 @@ class Dispatcher():
         """
         sock = self.worker_xrep_stream
 
-        # message = sock.recv_multipart()
         getattr(self, message[1].lower())(sock, message)
 
     def send_pings(self):
@@ -102,26 +96,14 @@ class Dispatcher():
         is sent to the listener socket on the worker. The worker will reply
         with a pong back to the worker_response_socket.
         """
-        if len(self.LRU) > 0:
-            ping_time = str(time.time())
-            #ping_sock = self.context.socket(zmq.XREQ)
-            for worker in self.LRU:
-                #ping_sock.connect(self.workers[worker]["connection"])
-                self.workers[worker]["socket"].send_multipart(["PING", ping_time])
-                self.pings.append("%s_%s" % (worker, ping_time))
-            #ping_sock.close()
-
-    def send_pub(self):
-        """ Test method for validating pub/sub is working """
-        self.pub_socket.send_multipart(["PING", ""])
+        ping_time = str(time.time())
+        self.pub_socket.send_multipart(["PING", ping_time ])
 
     def pong(self, sock, message):
         """ pong is a reply to a ping for a worker in the LRU queue. """
         (worker_id, command, request) = message
-        print "got ping for %s" % worker_id
-        self.workers[worker_id]["last_pong"] = float(request)
-        self.pings.remove("%s_%s" %(worker_id, request))
-        print self.pings
+        if self.workers.has_key(worker_id):
+            self.workers[worker_id]["last_pong"] = float(request)
 
 
     def heartbeat(self, sock, message):
@@ -134,17 +116,12 @@ class Dispatcher():
         """ ready is the worker informing Scale0 it can accept more jobs.
         """
 
-        (worker_id, command, request) = message
-        (uri, services) = request.split(" ", 2)
-        socket = self.context.socket(zmq.XREQ)
-        socket.connect(uri)
-        self.workers[worker_id] = {"connection": uri,
-            "services": services.split(","),
-            "last_pong": time.time(),
-            "socket": socket}
+        (worker_id, command, services) = message
+        self.workers[worker_id] = {"services": services.split(","),
+            "last_pong": time.time()}
         self.LRU.append(worker_id)
-        sock.send_multipart([worker_id, "OK", ""])
-        print "Worker %s READY" % uri
+        self.pub_socket.send_multipart([worker_id, "OK"])
+        print "Worker %s READY" % worker_id 
 
 if __name__ == "__main__":
     Dispatcher()
