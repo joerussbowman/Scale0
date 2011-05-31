@@ -68,15 +68,18 @@ class Worker():
 
     def sub_handler(self, msg):
         """ Trying to move to pub/sub for getting messages to workers. """
-        (command, request) = msg
-        if command == "PING":
-            self.broker_socket.send_multipart(["PONG", request])
-        if command == "OK":
-            self.connect_state = 2
-            print 'In LRU Queue'
+        if msg[0] == "PING":
+            self.broker_socket.send_multipart(msg)
+        if msg[0] == self.my_id:
+            (id, command) = msg[:2]
+            if command == "OK":
+                self.connection_state = 2
+                print 'In LRU Queue'
+            if command == "HEARTBEAT":
+                data = msg[2]
+                print "Got heartbeat timestamp %s" % data
 
     def connect(self):
-        print 'Running connect test'
         if self.connection_state < 1:
             print 'connecting to broker'
             self.broker_socket.send_multipart(["READY", 

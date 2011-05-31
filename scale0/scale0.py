@@ -38,9 +38,9 @@ class Dispatcher():
 
         """ Workers info would look something like
         {
-            "worker1": { "services": ["web"], "last_pong": int(time.time())}
-            "worker2": { "services": ["web"], "last_pong": int(time.time())}
-            "worker3": { "services": ["news", "mail"], "last_pong": int(time.time())}
+            "worker1": { "services": ["web"], "last_ping": int(time.time())}
+            "worker2": { "services": ["web"], "last_ping": int(time.time())}
+            "worker3": { "services": ["news", "mail"], "last_ping": int(time.time())}
         }
         Eventually I'll move it to an object with getter and setters which
         can use something like gaeutilities event to notify the main
@@ -94,23 +94,25 @@ class Dispatcher():
         """ pings are the heartbeat check to determine if the workers listed
         in the LRU queue are still available. A socket is created and the ping
         is sent to the listener socket on the worker. The worker will reply
-        with a pong back to the worker_response_socket.
+        with a ping back to the worker_response_socket.
         """
         ping_time = str(time.time())
         self.pub_socket.send_multipart(["PING", ping_time ])
 
-    def pong(self, sock, message):
-        """ pong is a reply to a ping for a worker in the LRU queue. """
+    def ping(self, sock, message):
+        """ ping message received is a reply to a ping for a worker in the LRU queue. """
         (worker_id, command, request) = message
         if self.workers.has_key(worker_id):
-            self.workers[worker_id]["last_pong"] = float(request)
+            self.workers[worker_id]["last_ping"] = float(request)
+            print 'got ping from %s' % worker_id
 
 
     def heartbeat(self, sock, message):
         """ For heartbeat we just shoot the request right back at the sender.
         Don't even bother to parse anything to save time.
         """
-        sock.send_multipart(message)
+        print message
+        self.pub_socket.send_multipart(message)
 
     def ready(self, sock, message):
         """ ready is the worker informing Scale0 it can accept more jobs.
@@ -118,7 +120,7 @@ class Dispatcher():
 
         (worker_id, command, services) = message
         self.workers[worker_id] = {"services": services.split(","),
-            "last_pong": time.time()}
+            "last_ping": time.time()}
         self.LRU.append(worker_id)
         self.pub_socket.send_multipart([worker_id, "OK"])
         print "Worker %s READY" % worker_id 
