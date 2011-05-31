@@ -23,7 +23,6 @@ class Worker():
         self.broker_stream = zmqstream.ZMQStream(self.broker_socket, self.loop)
 
         self.sub_socket = self.context.socket(zmq.SUB)
-        self.sub_socket.setsockopt(zmq.IDENTITY, "%s_worker_sub" % self.my_id)
         self.sub_socket.connect("tcp://127.0.0.1:8082")
         self.sub_socket.setsockopt(zmq.SUBSCRIBE, self.my_id)
         print "subscribed to %s" % self.my_id
